@@ -125,7 +125,7 @@ function guardar_(d, papel) {
     if (!t.nome) throw new Error('Falta o nome do cliente');
     t.nif = String(t.nif || '').replace(/\D/g, '');
     if (t.fatura === 'Sim' && t.estado === 'Concluído' && t.nif.length !== 9) throw new Error('Com fatura é preciso o contribuinte (9 dígitos)');
-    t.valor = t.valor === '' ? '' : String(Number(String(t.valor).replace(',', '.')) || 0);
+    t.valor = (t.valor === undefined || t.valor === null || String(t.valor).trim() === '') ? '' : String(Number(String(t.valor).replace(',', '.')) || 0);
     t.estado = t.estado || 'Agendado';
     t.atualizado = agora;
 

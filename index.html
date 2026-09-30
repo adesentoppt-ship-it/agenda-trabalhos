@@ -152,6 +152,10 @@ async function renovarSub(){ // em cada entrada: mantém o telemóvel registado 
   const sub = await subAtual(); if (!sub) return;
   await guardarCfgSW(); try { await call('subscrever', { endpoint: sub.endpoint }, true); } catch(e){}
 }
+let PEDIDO_INSTALAR = null;
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); PEDIDO_INSTALAR = e; if (TAB==='agenda') cartaoNotif(); });
+window.addEventListener('appinstalled', () => { PEDIDO_INSTALAR = null; toast('📲 App instalada'); if (TAB==='agenda') cartaoNotif(); });
+async function instalarApp(){ if (!PEDIDO_INSTALAR) return; PEDIDO_INSTALAR.prompt(); await PEDIDO_INSTALAR.userChoice; PEDIDO_INSTALAR = null; cartaoNotif(); }
 async function cartaoNotif(){
   const el = $('#notifbox'); if (!el) return;
   const e = await estadoNotif();
@@ -160,6 +164,7 @@ async function cartaoNotif(){
   else if (e === 'ios-instalar') el.innerHTML = `<div class="card notif"><b>🔔 Para receber notificações no iPhone</b>Toque em <b style="display:inline">Partilhar ⬆️</b> → <b style="display:inline">Adicionar ao ecrã principal</b>. Depois abra a app pelo ícone novo e ative aqui.</div>`;
   else if (e === 'bloqueado') el.innerHTML = `<div class="card notif"><b>🔕 Notificações bloqueadas</b>Nas definições do telemóvel/navegador, permita notificações para esta app.</div>`;
   else el.innerHTML = '';
+  if (PEDIDO_INSTALAR && !INSTALADA) el.innerHTML = `<div class="card notif"><b>📲 Instalar a app no telemóvel</b>Fica com ícone próprio, como uma aplicação normal.<button class="btn" style="background:var(--az)" onclick="instalarApp()">Instalar app</button></div>` + el.innerHTML;
 }
 
 /* ---------- login ---------- */
@@ -212,7 +217,7 @@ function cartao(j){
     <div class="n">${esc(j.nome)}</div>
     <div class="m">${esc(j.servico||'')}${j.tecnico?' · 👷 '+esc(j.tecnico):''}</div>
     ${j.morada?`<div class="m">${esc(j.morada)}</div>`:''}
-    ${j.valor!==''&&j.valor!=null?`<div class="m"><b style="color:var(--tx)">${eur(j.valor)}</b> ${j.pagamento?'· '+esc(j.pagamento):''}${j.fatura==='Sim'?' · 🧾 Fatura':''}</div>`:''}
+    ${j.estado==='Concluído'&&j.valor!==''&&j.valor!=null?`<div class="m"><b style="color:var(--tx)">${eur(j.valor)}</b> ${j.pagamento?'· '+esc(j.pagamento):''}${j.fatura==='Sim'?' · 🧾 Fatura':''}</div>`:''}
     <div class="acts">${tel}${map}${concl}</div></div>`;
 }
 function agenda(){

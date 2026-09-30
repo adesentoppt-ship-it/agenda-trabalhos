@@ -2,6 +2,10 @@
 const CFG_URL = new URL('./__cfg', self.location.href).href;
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', e => e.waitUntil(self.clients.claim()));
+// Necessário para o Chrome deixar "Instalar app": abre sempre a versão mais recente da rede
+self.addEventListener('fetch', e => {
+  if (e.request.mode === 'navigate') e.respondWith(fetch(e.request).catch(() => caches.match(e.request)));
+});
 
 self.addEventListener('push', e => e.waitUntil(mostrar()));
 async function mostrar() {
