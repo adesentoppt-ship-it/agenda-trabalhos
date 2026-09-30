@@ -45,7 +45,10 @@
   #toast{position:fixed;left:50%;bottom:80px;transform:translateX(-50%);background:#222;color:#fff;padding:10px 16px;border-radius:9px;font-size:14px;display:none;z-index:9}
   .seg{display:flex;gap:6px;margin-bottom:6px}.seg button{flex:1;padding:8px;border:1px solid var(--bd);background:#fff;border-radius:8px;font-size:14px}
   .seg button.on{background:var(--az);color:#fff;border-color:var(--az)}
-  .load{opacity:.5;pointer-events:none}
+  #spin{position:fixed;inset:0;background:rgba(244,246,249,.6);display:none;align-items:center;justify-content:center;flex-direction:column;gap:10px;z-index:8;font-size:14px;color:var(--mu)}
+  #spin.on{display:flex}
+  #spin i{width:34px;height:34px;border:4px solid var(--bd);border-top-color:var(--az);border-radius:50%;animation:rd .8s linear infinite}
+  @keyframes rd{to{transform:rotate(360deg)}}
 </style>
 </head>
 <body>
@@ -57,6 +60,7 @@
   <button data-t="valores" onclick="ir('valores')"><b>💶</b>Valores</button>
 </nav>
 <div id="toast"></div>
+<div id="spin"><i></i><span>A carregar…</span></div>
 
 <script src="config.js" onerror="void 0"></script>
 <script>
@@ -74,19 +78,30 @@ let API_URL = (window.AGENDA_API_URL || '');
 try { API_URL = API_URL || localStorage.getItem('api') || ''; } catch(e){}
 const DENTRO_GOOGLE = typeof google !== 'undefined' && google.script && google.script.run;
 
-function call(acao, dados){
-  document.body.classList.add('load');
-  const fim = () => document.body.classList.remove('load');
+let _pend = 0, _spinT;
+function spin(on){
+  _pend += on ? 1 : -1;
+  clearTimeout(_spinT);
+  if (_pend > 0) _spinT = setTimeout(()=>$('#spin').classList.add('on'), 250);
+  else $('#spin').classList.remove('on');
+}
+function call(acao, dados, silencioso){
+  if (!silencioso) spin(true);
+  const fim = () => { if (!silencioso) spin(false); };
   if (DENTRO_GOOGLE) return new Promise((ok, ko) => google.script.run
     .withSuccessHandler(r => { fim(); ok(r); })
     .withFailureHandler(e => { fim(); toast(e.message || 'Erro'); ko(e); })
     .api(PIN, acao, dados || {}));
-  return fetch(API_URL, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
+  const ctl = new AbortController(); const tm = setTimeout(()=>ctl.abort(), 30000);
+  return fetch(API_URL, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, signal: ctl.signal,
       body: JSON.stringify({ pin: PIN, acao, dados: dados || {} }) })
     .then(r => r.json())
-    .then(j => { fim(); if (!j.ok) throw new Error(j.erro); return j.r; })
-    .catch(e => { fim(); toast(e.message || 'Sem ligação'); throw e; });
+    .then(j => { clearTimeout(tm); fim(); if (!j.ok) { const e = new Error(j.erro); e.servidor = true; throw e; } return j.r; })
+    .catch(e => { clearTimeout(tm); fim();
+      if (!e.servidor) e.message = e.name === 'AbortError' ? 'O servidor demorou demasiado. Tente de novo.' : 'Sem ligação à internet. Tente de novo.';
+      toast(e.message); throw e; });
 }
+function setJobs(j){ JOBS = j || []; try { localStorage.setItem('cache', JSON.stringify({pin: PIN, papel: PAPEL, jobs: JOBS})); } catch(e){} }
 
 /* ---------- NIF português ---------- */
 function nifValido(n){
@@ -108,19 +123,29 @@ function ecraLogin(msg){
     <button class="btn" onclick="entrar($('#pin').value)">Entrar</button></div>`;
   $('#pin').addEventListener('keydown', e => { if(e.key==='Enter') entrar(e.target.value); });
 }
+function mostrarApp(){
+  $('#nav').style.display='flex'; $('#sair').style.display='block';
+  document.querySelectorAll('nav button[data-t=novo], nav button[data-t=valores]').forEach(b=>b.style.display = PAPEL==='tecnico' ? 'none' : '');
+}
 async function entrar(p){
-  PIN = p;
+  PIN = String(p||'').trim();
   const a = $('#api'); if (a && a.value.trim()) { API_URL = a.value.trim(); try{localStorage.setItem('api', API_URL)}catch(e){} }
   if (!DENTRO_GOOGLE && !API_URL) return ecraLogin('Falta o endereço do servidor');
+  let cache = null; try { cache = JSON.parse(localStorage.getItem('cache') || 'null'); } catch(e){}
+  const temCache = cache && cache.pin === PIN;
+  if (temCache){ PAPEL = cache.papel; JOBS = cache.jobs || []; mostrarApp(); ir('agenda'); }  // mostra logo o que já tinha
   try {
-    const r = await call('entrar'); PAPEL = r.papel;
-    try { localStorage.setItem('pin', p); } catch(e){}
-    $('#nav').style.display='flex'; $('#sair').style.display='block';
-    document.querySelectorAll('nav button[data-t=novo], nav button[data-t=valores]').forEach(b=>b.style.display = PAPEL==='tecnico' ? 'none' : '');
-    JOBS = await call('listar'); ir('agenda');
-  } catch(e){ try{localStorage.removeItem('pin')}catch(_){} ecraLogin('PIN errado'); }
+    const r = await call('entrar', {}, temCache);
+    PAPEL = r.papel; setJobs(r.jobs);
+    try { localStorage.setItem('pin', PIN); } catch(e){}
+    mostrarApp();
+    if (!temCache || TAB==='agenda' || TAB==='valores') ir(TAB==='valores' ? 'valores' : 'agenda');
+  } catch(e){
+    if (e.servidor){ try{localStorage.removeItem('pin'); localStorage.removeItem('cache')}catch(_){} ecraLogin(e.message); }
+    else if (!temCache) ecraLogin(e.message);
+  }
 }
-function sair(){ try{localStorage.removeItem('pin')}catch(e){} PIN=''; ecraLogin(); }
+function sair(){ try{localStorage.removeItem('pin'); localStorage.removeItem('cache')}catch(e){} PIN=''; ecraLogin(); }
 
 /* ---------- navegação ---------- */
 function ir(t){ TAB=t; document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on', b.dataset.t===t));
@@ -140,26 +165,30 @@ function cartao(j){
     <div class="acts">${tel}${map}${concl}</div></div>`;
 }
 function agenda(){
-  const h = hoje(); const q = (window._q||'').toLowerCase();
-  let lista = JOBS.filter(j => !q || [j.nome,j.nif,j.morada,j.servico,j.telefone].join(' ').toLowerCase().includes(q));
-  const ord = (a,b) => (a.data+a.hora).localeCompare(b.data+b.hora);
-  let html = `<input placeholder="🔍 Procurar cliente, NIF, morada…" value="${esc(window._q||'')}" oninput="window._q=this.value;agenda();this.focus()" id="q">
+  $('#app').innerHTML = `<input placeholder="🔍 Procurar cliente, NIF, morada…" value="${esc(window._q||'')}" oninput="window._q=this.value;lista()" id="q">
     <div class="seg" style="margin-top:10px">
       <button class="${FILTRO==='proximos'?'on':''}" onclick="FILTRO='proximos';agenda()">Próximos</button>
-      <button class="${FILTRO==='anteriores'?'on':''}" onclick="FILTRO='anteriores';agenda()">Anteriores</button></div>`;
+      <button class="${FILTRO==='anteriores'?'on':''}" onclick="FILTRO='anteriores';agenda()">Anteriores</button></div>
+    <div id="lista"></div>`;
+  lista();
+}
+function lista(){
+  const h = hoje(); const q = (window._q||'').toLowerCase();
+  const l = JOBS.filter(j => !q || [j.nome,j.nif,j.morada,j.servico,j.telefone].join(' ').toLowerCase().includes(q));
+  const ord = (a,b) => (a.data+a.hora).localeCompare(b.data+b.hora);
+  let html = '';
   if (FILTRO==='proximos'){
-    const hj = lista.filter(j=>j.data===h).sort(ord);
-    const fut = lista.filter(j=>j.data>h).sort(ord);
-    const atras = lista.filter(j=>j.data<h && j.estado==='Agendado').sort(ord);
+    const hj = l.filter(j=>j.data===h).sort(ord);
+    const fut = l.filter(j=>j.data>h).sort(ord);
+    const atras = l.filter(j=>j.data<h && j.estado==='Agendado').sort(ord);
     if(atras.length) html += `<h2 style="color:var(--er)">Por concluir (atrasados)</h2>` + atras.map(cartao).join('');
     html += `<h2>Hoje</h2>` + (hj.length ? hj.map(cartao).join('') : `<div class="card vazio">Nada agendado para hoje</div>`);
     html += `<h2>Próximos</h2>` + (fut.length ? fut.map(cartao).join('') : `<div class="card vazio">Sem trabalhos futuros</div>`);
   } else {
-    const ant = lista.filter(j=>j.data<h).sort(ord).reverse();
+    const ant = l.filter(j=>j.data<h).sort(ord).reverse();
     html += `<h2>Anteriores</h2>` + (ant.length ? ant.map(cartao).join('') : `<div class="card vazio">Sem trabalhos anteriores</div>`);
   }
-  $('#app').innerHTML = html;
-  const qi = $('#q'); if (window._q) { qi.setSelectionRange(qi.value.length, qi.value.length); }
+  $('#lista').innerHTML = html;
 }
 
 /* ---------- formulário ---------- */
@@ -290,12 +319,12 @@ async function guardar(id){
   }
   if (concl && !d.valor) return toast('Coloque o valor do trabalho');
   if (concl && isNaN(Number(d.valor))) return toast('Valor inválido');
-  JOBS = await call('guardar', d);
+  setJobs(await call('guardar', d));
   toast('Guardado ✓'); ir('agenda');
 }
 async function apagar(id){
   if (!confirm('Apagar este trabalho? Isto não pode ser desfeito.')) return;
-  JOBS = await call('apagar', {id}); toast('Apagado'); ir('agenda');
+  setJobs(await call('apagar', {id})); toast('Apagado'); ir('agenda');
 }
 
 /* ---------- valores ---------- */

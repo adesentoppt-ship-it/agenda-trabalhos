@@ -39,7 +39,7 @@ function api(pin, acao, dados) {
   const papel = papel_(pin);
   if (!papel) throw new Error('PIN errado');
   switch (acao) {
-    case 'entrar': return { papel: papel };
+    case 'entrar': return { papel: papel, jobs: listar_() }; // 1 só pedido ao entrar
     case 'listar': return listar_();
     case 'guardar': return guardar_(dados, papel);
     case 'apagar':
