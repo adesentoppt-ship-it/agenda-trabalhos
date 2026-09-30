@@ -12,7 +12,7 @@ const ALARMES_MIN = [60, 15]; // avisos antes do trabalho (minutos)
 const FOLHA = 'Trabalhos';
 const COLS = ['id', 'data', 'hora', 'duracao', 'nome', 'nif', 'morada', 'telefone',
   'servico', 'tecnico', 'estado', 'valor', 'pagamento', 'notas',
-  'eventoId', 'criado', 'atualizado', 'fatura'];
+  'eventoId', 'criado', 'atualizado', 'fatura', 'lembrado'];
 
 function doGet() {
   return HtmlService.createHtmlOutputFromFile('Index')
@@ -42,6 +42,8 @@ function api(pin, acao, dados) {
     case 'entrar': return { papel: papel, jobs: listar_() }; // 1 só pedido ao entrar
     case 'listar': return listar_();
     case 'guardar': return guardar_(dados, papel);
+    case 'subscrever': return subscrever_(dados, papel);   // ativar notificações neste telemóvel
+    case 'aviso': return ultimoAviso_(papel);              // texto da última notificação
     case 'apagar':
       if (papel !== 'admin') throw new Error('Só o dono pode apagar trabalhos');
       return apagar_(dados.id);
@@ -93,6 +95,7 @@ function linhaDe_(sh, id) {
 }
 
 function guardar_(d, papel) {
+  let aviso = null;
   const lock = LockService.getScriptLock();
   lock.waitLock(20000);
   try {
@@ -126,15 +129,34 @@ function guardar_(d, papel) {
     t.estado = t.estado || 'Agendado';
     t.atualizado = agora;
 
+    if (linha > 0 && (t.data !== atual.data || t.hora !== atual.hora)) t.lembrado = '';
     try { t.eventoId = sincronizarEvento_(t); } catch (e) { /* calendário falhou: guarda na mesma */ }
 
     const row = [COLS.map(c => t[c] === undefined ? '' : t[c])];
     if (linha > 0) sh.getRange(linha, 1, 1, COLS.length).setValues(row);
     else sh.appendRow(row[0]);
+    aviso = avisoPara_(papel, linha < 0 ? null : atual, t);
     return listar_();
   } finally {
     lock.releaseLock();
+    if (aviso) { try { notificar_(aviso[0], aviso[1], aviso[2]); } catch (e) {} }
   }
+}
+
+/* Decide quem recebe notificação depois de guardar */
+function avisoPara_(papel, antes, t) {
+  const dm = t.data ? t.data.slice(8, 10) + '/' + t.data.slice(5, 7) : '';
+  const onde = t.nome + (t.morada ? '\n' + t.morada : '');
+  if (papel === 'admin' && !antes && t.estado !== 'Cancelado')
+    return ['tecnico', '🔧 Novo trabalho: ' + (t.servico || 'Trabalho'), dm + ' às ' + t.hora + ' · ' + onde];
+  if (papel === 'admin' && antes && t.estado === 'Cancelado' && antes.estado !== 'Cancelado')
+    return ['tecnico', '❌ Trabalho cancelado', dm + ' às ' + t.hora + ' · ' + t.nome];
+  if (papel === 'admin' && antes && (antes.data !== t.data || antes.hora !== t.hora || antes.morada !== t.morada))
+    return ['tecnico', '📅 Trabalho alterado: ' + (t.servico || 'Trabalho'), dm + ' às ' + t.hora + ' · ' + onde];
+  if (papel === 'tecnico' && antes && t.estado === 'Concluído' && antes.estado !== 'Concluído')
+    return ['admin', '✅ Concluído: ' + t.nome, (t.valor ? Number(t.valor).toFixed(2).replace('.', ',') + ' €' : 'sem valor') +
+      (t.pagamento ? ' · ' + t.pagamento : '') + (t.fatura === 'Sim' ? ' · 🧾 com fatura' : '')];
+  return null;
 }
 
 function apagar_(id) {
@@ -182,6 +204,10 @@ function sincronizarEvento_(t) {
 /* Execute uma vez à mão no editor para autorizar e criar a folha */
 function configurar() {
   folha_();
+  folhaAvisos_();
   CalendarApp.getDefaultCalendar();
+  UrlFetchApp.getRequest('https://www.google.com'); // pede autorização para enviar notificações
+  if (!ScriptApp.getProjectTriggers().some(t => t.getHandlerFunction() === 'lembretes'))
+    ScriptApp.newTrigger('lembretes').timeBased().everyMinutes(10).create();
   Logger.log('Pronto! Agora faça Implementar > Nova implementação.');
 }

@@ -4,6 +4,11 @@
 <base target="_top">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#0b5cab">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Agenda">
 <style>
   :root{--az:#0b5cab;--az2:#e8f1fb;--tx:#1b2430;--mu:#6b7684;--bd:#dde3ea;--bg:#f4f6f9;--ok:#1f8a4c;--av:#c77700;--er:#c0392b}
   *{box-sizing:border-box}
@@ -47,6 +52,9 @@
   .seg button.on{background:var(--az);color:#fff;border-color:var(--az)}
   #spin{position:fixed;inset:0;background:rgba(244,246,249,.6);display:none;align-items:center;justify-content:center;flex-direction:column;gap:10px;z-index:8;font-size:14px;color:var(--mu)}
   #spin.on{display:flex}
+  .notif{background:#fff8e6;border-color:#f3d48a}
+  .notif b{display:block;margin-bottom:4px}
+  .notif .btn{margin-top:10px;padding:11px;background:var(--av)}
   #spin i{width:34px;height:34px;border:4px solid var(--bd);border-top-color:var(--az);border-radius:50%;animation:rd .8s linear infinite}
   @keyframes rd{to{transform:rotate(360deg)}}
 </style>
@@ -112,6 +120,48 @@ function nifValido(n){
   return c === +n[8];
 }
 
+/* ---------- notificações push ---------- */
+const VAPID_PUB = 'BClgIdU7OVnICrWWfUoxW4s0x1Y7avuO_xoG6xPynUNUTxZI9ZCJ0vtsbRScN-LNf0rV_Tc5dEMpyPvimg8l5Go';
+const PUSH_OK = !DENTRO_GOOGLE && 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+const IOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+const INSTALADA = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+let SW = null;
+if (!DENTRO_GOOGLE && 'serviceWorker' in navigator) SW = navigator.serviceWorker.register('sw.js').catch(() => null);
+function u8(b64){ const p = '='.repeat((4 - b64.length % 4) % 4); const r = atob((b64 + p).replace(/-/g,'+').replace(/_/g,'/')); return Uint8Array.from(r, c => c.charCodeAt(0)); }
+async function guardarCfgSW(){ try { const c = await caches.open('agenda-cfg');
+  await c.put(new URL('./__cfg', location.href).href, new Response(JSON.stringify({ api: API_URL, pin: PIN }))); } catch(e){} }
+async function subAtual(){ try { const reg = await navigator.serviceWorker.ready; return await reg.pushManager.getSubscription(); } catch(e){ return null; } }
+async function estadoNotif(){
+  if (!PUSH_OK) return IOS && !INSTALADA ? 'ios-instalar' : 'sem-suporte';
+  if (Notification.permission === 'denied') return 'bloqueado';
+  return (Notification.permission === 'granted' && await subAtual()) ? 'ativo' : 'desligado';
+}
+async function ativarNotif(){
+  try {
+    const perm = await Notification.requestPermission();
+    if (perm !== 'granted') { toast('As notificações ficaram bloqueadas'); return agenda(); }
+    const reg = await navigator.serviceWorker.ready;
+    const sub = (await reg.pushManager.getSubscription()) || await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: u8(VAPID_PUB) });
+    await guardarCfgSW();
+    await call('subscrever', { endpoint: sub.endpoint });
+    toast('🔔 Notificações ativadas'); agenda();
+  } catch(e){ toast('Não foi possível ativar: ' + (e.message || e)); }
+}
+async function renovarSub(){ // em cada entrada: mantém o telemóvel registado com o papel certo
+  if (!PUSH_OK || Notification.permission !== 'granted') return;
+  const sub = await subAtual(); if (!sub) return;
+  await guardarCfgSW(); try { await call('subscrever', { endpoint: sub.endpoint }, true); } catch(e){}
+}
+async function cartaoNotif(){
+  const el = $('#notifbox'); if (!el) return;
+  const e = await estadoNotif();
+  const quem = PAPEL === 'tecnico' ? 'quando o chefe marcar ou mudar um trabalho, e 1 hora antes de cada trabalho' : 'quando o técnico concluir um trabalho';
+  if (e === 'desligado') el.innerHTML = `<div class="card notif"><b>🔔 Ativar notificações neste telemóvel</b>Recebe um alerta ${quem}.<button class="btn" onclick="ativarNotif()">Ativar notificações</button></div>`;
+  else if (e === 'ios-instalar') el.innerHTML = `<div class="card notif"><b>🔔 Para receber notificações no iPhone</b>Toque em <b style="display:inline">Partilhar ⬆️</b> → <b style="display:inline">Adicionar ao ecrã principal</b>. Depois abra a app pelo ícone novo e ative aqui.</div>`;
+  else if (e === 'bloqueado') el.innerHTML = `<div class="card notif"><b>🔕 Notificações bloqueadas</b>Nas definições do telemóvel/navegador, permita notificações para esta app.</div>`;
+  else el.innerHTML = '';
+}
+
 /* ---------- login ---------- */
 function ecraLogin(msg){
   $('#nav').style.display='none'; $('#sair').style.display='none';
@@ -138,6 +188,7 @@ async function entrar(p){
     const r = await call('entrar', {}, temCache);
     PAPEL = r.papel; setJobs(r.jobs);
     try { localStorage.setItem('pin', PIN); } catch(e){}
+    renovarSub();
     mostrarApp();
     if (!temCache || TAB==='agenda' || TAB==='valores') ir(TAB==='valores' ? 'valores' : 'agenda');
   } catch(e){
@@ -165,12 +216,12 @@ function cartao(j){
     <div class="acts">${tel}${map}${concl}</div></div>`;
 }
 function agenda(){
-  $('#app').innerHTML = `<input placeholder="🔍 Procurar cliente, NIF, morada…" value="${esc(window._q||'')}" oninput="window._q=this.value;lista()" id="q">
+  $('#app').innerHTML = `<div id="notifbox"></div><input placeholder="🔍 Procurar cliente, NIF, morada…" value="${esc(window._q||'')}" oninput="window._q=this.value;lista()" id="q">
     <div class="seg" style="margin-top:10px">
       <button class="${FILTRO==='proximos'?'on':''}" onclick="FILTRO='proximos';agenda()">Próximos</button>
       <button class="${FILTRO==='anteriores'?'on':''}" onclick="FILTRO='anteriores';agenda()">Anteriores</button></div>
     <div id="lista"></div>`;
-  lista();
+  lista(); cartaoNotif();
 }
 function lista(){
   const h = hoje(); const q = (window._q||'').toLowerCase();
@@ -355,6 +406,12 @@ function valores(){
       ${js.sort((a,b)=>a.data.localeCompare(b.data)).map(j=>`<tr onclick="editar('${j.id}')"><td>${j.data.slice(8)}/${j.data.slice(5,7)}</td><td>${esc(j.nome)}</td><td>${j.fatura==='Sim'?'🧾 '+esc(j.nif):'—'}</td><td class="r">${j.valor===''?'<span class="bad">—</span>':eur(j.valor)}</td></tr>`).join('')}
     </table></div>`;
 }
+
+/* ---------- ao voltar à app (ex.: tocou na notificação) ---------- */
+document.addEventListener('visibilitychange', async () => {
+  if (document.visibilityState !== 'visible' || !PIN || !PAPEL) return;
+  try { const r = await call('entrar', {}, true); setJobs(r.jobs); if (TAB==='agenda') lista(); else if (TAB==='valores') valores(); } catch(e){}
+});
 
 /* ---------- arranque ---------- */
 let guardado = ''; try { guardado = localStorage.getItem('pin') || ''; } catch(e){}
