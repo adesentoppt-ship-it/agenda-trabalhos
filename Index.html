@@ -136,7 +136,7 @@ function cartao(j){
     <div class="n">${esc(j.nome)}</div>
     <div class="m">${esc(j.servico||'')}${j.tecnico?' · 👷 '+esc(j.tecnico):''}</div>
     ${j.morada?`<div class="m">${esc(j.morada)}</div>`:''}
-    ${j.valor!==''?`<div class="m"><b style="color:var(--tx)">${eur(j.valor)}</b> ${j.pagamento?'· '+esc(j.pagamento):''}</div>`:''}
+    ${j.valor!==''&&j.valor!=null?`<div class="m"><b style="color:var(--tx)">${eur(j.valor)}</b> ${j.pagamento?'· '+esc(j.pagamento):''}${j.fatura==='Sim'?' · 🧾 Fatura':''}</div>`:''}
     <div class="acts">${tel}${map}${concl}</div></div>`;
 }
 function agenda(){
@@ -167,11 +167,26 @@ function novo(){ formulario({ data: hoje(), hora: '09:00', duracao: '60', estado
 function editar(id){ formulario(JOBS.find(j=>j.id===id)); }
 function concluir(id){ const j = JOBS.find(x=>x.id===id); formulario(Object.assign({}, j, {estado:'Concluído'}), true); }
 
-function blocoValor(j){
+function blocoValor(j, comNif){
   const opt = (arr, v) => arr.map(o=>`<option ${o===v?'selected':''}>${o}</option>`).join('');
+  const fat = j.fatura === 'Sim';
   return `<div id="blocoValor" style="display:${j.estado==='Concluído'?'block':'none'}">
     <div class="row"><div><label>Valor do trabalho (€)</label><input id="f_valor" inputmode="decimal" value="${j.valor===''||j.valor==null?'':esc(j.valor)}" placeholder="0,00"></div>
-      <div><label>Pagamento</label><select id="f_pagamento"><option value="">—</option>${opt(['Dinheiro','MB Way','Multibanco','Transferência','Por pagar'], j.pagamento)}</select></div></div></div>`;
+      <div><label>Pagamento</label><select id="f_pagamento"><option value="">—</option>${opt(['Dinheiro','MB Way','Multibanco','Transferência','Por pagar'], j.pagamento)}</select></div></div>
+    <label>O cliente quer fatura?</label>
+    <select id="f_fatura" onchange="mostrarFatura()">${opt(['Não','Sim'], fat?'Sim':'Não')}</select>
+    ${comNif ? `<div id="blocoFatura" style="display:${fat?'block':'none'}">
+      <label>Contribuinte (NIF)</label>
+      <input id="f_nif" inputmode="numeric" maxlength="9" value="${esc(j.nif)}" placeholder="9 dígitos" oninput="verNif()">
+      <div id="nifmsg" class="hint"></div>
+      <label>Nome completo (para a fatura)</label>
+      <input id="f_nome" value="${esc(j.nome)}"></div>` : ''}
+  </div>`;
+}
+function mostrarFatura(){
+  const b = $('#blocoFatura'); if (!b) return;
+  const s = $('#f_fatura').value === 'Sim'; b.style.display = s ? 'block' : 'none';
+  if (s) { verNif(true); setTimeout(()=>$('#f_nif').focus(), 50); }
 }
 function mostrarValor(){
   const c = $('#f_estado').value === 'Concluído';
@@ -191,7 +206,7 @@ function formulario(j, focoValor){
       <div><label>Técnico</label><input id="f_tecnico" value="${esc(j.tecnico)}" placeholder="Nome"></div></div>
 
     <h2>Cliente</h2>
-    <label>Contribuinte (NIF)</label>
+    <label>Contribuinte (NIF) <span style="font-size:12px">— só se quiser fatura</span></label>
     <input id="f_nif" inputmode="numeric" maxlength="9" value="${esc(j.nif)}" placeholder="9 dígitos" oninput="verNif()">
     <div id="nifmsg" class="hint"></div>
     <label>Nome completo</label>
@@ -208,7 +223,7 @@ function formulario(j, focoValor){
     <datalist id="lserv">${['Desentupimento de esgoto','Desentupimento de cozinha','Desentupimento de WC','Limpeza de fossa','Inspeção vídeo','Hidrojato','Reparação de canalização'].map(s=>`<option value="${s}">`).join('')}</datalist>
     <label>Estado</label>
     <select id="f_estado" onchange="mostrarValor()">${opt(['Agendado','Em curso','Concluído','Cancelado'], j.estado)}</select>
-    ${blocoValor(j)}
+    ${blocoValor(j, false)}
     <label>Notas</label>
     <textarea id="f_notas">${esc(j.notas)}</textarea>
     <button class="btn" onclick="guardar('${j.id||''}')">💾 Guardar</button>
@@ -231,7 +246,7 @@ function formTecnico(j, focoValor){
     <h2 style="margin-top:4px">Fechar trabalho</h2>
     <label>Estado</label>
     <select id="f_estado" onchange="mostrarValor()">${opt(['Agendado','Em curso','Concluído'], j.estado)}</select>
-    ${blocoValor(j)}
+    ${blocoValor(j, true)}
     <label>Notas</label>
     <textarea id="f_notas" placeholder="O que foi feito, observações…">${esc(j.notas)}</textarea>
     <button class="btn" onclick="guardar('${j.id}')">💾 Guardar</button>
@@ -246,11 +261,7 @@ function verNif(inicial){
   const ant = JOBS.filter(j=>j.nif===n).sort((a,b)=>b.atualizado.localeCompare(a.atualizado))[0];
   m.className='hint good';
   m.textContent = ant ? `✓ Cliente já conhecido: ${ant.nome}` : '✓ NIF válido';
-  if (ant && !inicial){
-    if(!$('#f_nome').value) $('#f_nome').value = ant.nome;
-    if(!$('#f_morada').value) $('#f_morada').value = ant.morada;
-    if(!$('#f_telefone').value) $('#f_telefone').value = ant.telefone;
-  }
+  if (ant && !inicial) ['nome','morada','telefone'].forEach(k => { const e = $('#f_'+k); if (e && !e.value) e.value = ant[k]; });
 }
 function preencherPorNome(){
   const nome = $('#f_nome').value;
@@ -265,7 +276,12 @@ async function guardar(id){
   const g = k => { const e = $('#f_'+k); return e ? e.value : undefined; };
   const concl = g('estado') === 'Concluído';
   const d = { id, estado:g('estado'), notas:g('notas') };
-  if (concl){ d.valor = g('valor').replace(',', '.').trim(); d.pagamento = g('pagamento'); }
+  if (concl){ d.valor = g('valor').replace(',', '.').trim(); d.pagamento = g('pagamento'); d.fatura = g('fatura'); }
+  if (PAPEL === 'tecnico' && concl && d.fatura === 'Sim'){
+    d.nif = g('nif').replace(/\D/g,''); d.nome = g('nome').trim();
+    if (!nifValido(d.nif)) return toast('Contribuinte inválido — confirme os 9 dígitos');
+    if (!d.nome) return toast('Falta o nome completo para a fatura');
+  }
   if (PAPEL !== 'tecnico') Object.assign(d, { data:g('data'), hora:g('hora'), duracao:g('duracao'), tecnico:g('tecnico'),
     nif:g('nif'), nome:g('nome'), morada:g('morada'), telefone:g('telefone'), servico:g('servico') });
   if (PAPEL !== 'tecnico'){
@@ -291,6 +307,7 @@ function valores(){
   const total = js.reduce((s,j)=>s+(Number(j.valor)||0),0);
   const porPagar = js.filter(j=>j.pagamento==='Por pagar').reduce((s,j)=>s+(Number(j.valor)||0),0);
   const semValor = js.filter(j=>j.valor==='').length;
+  const comFat = js.filter(j=>j.fatura==='Sim').reduce((s,j)=>s+(Number(j.valor)||0),0);
   const agrupa = k => { const m={}; js.forEach(j=>{ const c=j[k]||'—'; m[c]=(m[c]||0)+(Number(j.valor)||0); }); return Object.entries(m).sort((a,b)=>b[1]-a[1]); };
   const nomeMes = m => { const [y,mm]=m.split('-'); return new Date(y,mm-1,1).toLocaleDateString('pt-PT',{month:'long',year:'numeric'}); };
   $('#app').innerHTML = `
@@ -299,12 +316,14 @@ function valores(){
       <div class="card kpi"><div class="l">Faturado (concluídos)</div><div class="v">${eur(total)}</div></div>
       <div class="card kpi"><div class="l">Trabalhos concluídos</div><div class="v">${js.length}</div></div>
       <div class="card kpi"><div class="l">Por receber</div><div class="v" style="color:var(--av)">${eur(porPagar)}</div></div>
+      <div class="card kpi"><div class="l">Com fatura</div><div class="v">${eur(comFat)}</div></div>
+      <div class="card kpi"><div class="l">Sem fatura</div><div class="v">${eur(total-comFat)}</div></div>
       <div class="card kpi"><div class="l">Sem valor registado</div><div class="v" style="color:${semValor?'var(--er)':'inherit'}">${semValor}</div></div>
     </div>
     <h2>Por técnico</h2><div class="card"><table>${agrupa('tecnico').map(([k,v])=>`<tr><td>${esc(k)}</td><td class="r">${eur(v)}</td></tr>`).join('')||'<tr><td class="vazio">—</td></tr>'}</table></div>
     <h2>Por forma de pagamento</h2><div class="card"><table>${agrupa('pagamento').map(([k,v])=>`<tr><td>${esc(k)}</td><td class="r">${eur(v)}</td></tr>`).join('')||'<tr><td class="vazio">—</td></tr>'}</table></div>
-    <h2>Trabalhos do mês</h2><div class="card"><table><tr><th>Data</th><th>Cliente</th><th>NIF</th><th class="r">Valor</th></tr>
-      ${js.sort((a,b)=>a.data.localeCompare(b.data)).map(j=>`<tr onclick="editar('${j.id}')"><td>${j.data.slice(8)}/${j.data.slice(5,7)}</td><td>${esc(j.nome)}</td><td>${esc(j.nif)}</td><td class="r">${j.valor===''?'<span class="bad">—</span>':eur(j.valor)}</td></tr>`).join('')}
+    <h2>Trabalhos do mês</h2><div class="card"><table><tr><th>Data</th><th>Cliente</th><th>Fatura / NIF</th><th class="r">Valor</th></tr>
+      ${js.sort((a,b)=>a.data.localeCompare(b.data)).map(j=>`<tr onclick="editar('${j.id}')"><td>${j.data.slice(8)}/${j.data.slice(5,7)}</td><td>${esc(j.nome)}</td><td>${j.fatura==='Sim'?'🧾 '+esc(j.nif):'—'}</td><td class="r">${j.valor===''?'<span class="bad">—</span>':eur(j.valor)}</td></tr>`).join('')}
     </table></div>`;
 }
 

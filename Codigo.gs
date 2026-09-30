@@ -12,7 +12,7 @@ const ALARMES_MIN = [60, 15]; // avisos antes do trabalho (minutos)
 const FOLHA = 'Trabalhos';
 const COLS = ['id', 'data', 'hora', 'duracao', 'nome', 'nif', 'morada', 'telefone',
   'servico', 'tecnico', 'estado', 'valor', 'pagamento', 'notas',
-  'eventoId', 'criado', 'atualizado'];
+  'eventoId', 'criado', 'atualizado', 'fatura'];
 
 function doGet() {
   return HtmlService.createHtmlOutputFromFile('Index')
@@ -67,6 +67,7 @@ function folha_() {
     sh.getRange('A:Z').setNumberFormat('@'); // texto, para não estragar datas/NIF
     sh.getRange(2, COLS.indexOf('valor') + 1, sh.getMaxRows() - 1, 1).setNumberFormat('0.00');
   }
+  if (sh.getLastColumn() < COLS.length) sh.getRange(1, 1, 1, COLS.length).setValues([COLS]).setFontWeight('bold');
   return sh;
 }
 
@@ -108,16 +109,19 @@ function guardar_(d, papel) {
     const t = Object.assign({}, atual);
     // O dono marca o trabalho (cliente, NIF, morada, data). O técnico só fecha: estado, valor, pagamento, notas.
     if (papel === 'tecnico' && linha < 0) throw new Error('Só o dono pode criar trabalhos');
-    const campos = papel === 'tecnico'
-      ? ['estado', 'valor', 'pagamento', 'notas']
+    // Contribuinte: o técnico só o coloca no fim, e só se o cliente quiser fatura.
+    let campos = papel === 'tecnico'
+      ? ['estado', 'valor', 'pagamento', 'notas', 'fatura']
       : ['data', 'hora', 'duracao', 'nome', 'nif', 'morada', 'telefone', 'servico',
-        'tecnico', 'estado', 'valor', 'pagamento', 'notas'];
+        'tecnico', 'estado', 'valor', 'pagamento', 'notas', 'fatura'];
+    if (papel === 'tecnico' && d.fatura === 'Sim') campos = campos.concat(['nif', 'nome']);
     campos.forEach(k => {
       if (d[k] !== undefined) t[k] = String(d[k]).trim();
     });
     if (!t.data || !t.hora) throw new Error('Falta a data ou a hora');
     if (!t.nome) throw new Error('Falta o nome do cliente');
-    t.nif = t.nif.replace(/\D/g, '');
+    t.nif = String(t.nif || '').replace(/\D/g, '');
+    if (t.fatura === 'Sim' && t.estado === 'Concluído' && t.nif.length !== 9) throw new Error('Com fatura é preciso o contribuinte (9 dígitos)');
     t.valor = t.valor === '' ? '' : String(Number(String(t.valor).replace(',', '.')) || 0);
     t.estado = t.estado || 'Agendado';
     t.atualizado = agora;
