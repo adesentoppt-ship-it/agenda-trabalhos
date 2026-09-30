@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<style>
+  :root{--az:#0b5cab;--az2:#e8f1fb;--tx:#1b2430;--mu:#6b7684;--bd:#dde3ea;--bg:#f4f6f9;--ok:#1f8a4c;--av:#c77700;--er:#c0392b}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--tx);font-size:16px}
+  header{background:var(--az);color:#fff;padding:14px 16px;position:sticky;top:0;z-index:5;display:flex;justify-content:space-between;align-items:center}
+  header h1{font-size:18px;margin:0}
+  header button{background:rgba(255,255,255,.15);color:#fff;border:0;border-radius:8px;padding:6px 10px;font-size:13px}
+  main{padding:12px 12px 90px;max-width:720px;margin:0 auto}
+  nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--bd);display:flex;z-index:5}
+  nav button{flex:1;border:0;background:none;padding:10px 4px 14px;font-size:13px;color:var(--mu)}
+  nav button b{display:block;font-size:20px}
+  nav button.on{color:var(--az);font-weight:600}
+  .card{background:#fff;border:1px solid var(--bd);border-radius:12px;padding:12px 14px;margin-bottom:10px}
+  .job{cursor:pointer}
+  .job .top{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+  .job .h{font-weight:700;font-size:17px}
+  .job .n{font-weight:600}
+  .job .m{color:var(--mu);font-size:14px;margin-top:3px}
+  .tag{font-size:12px;padding:2px 8px;border-radius:99px;font-weight:600;white-space:nowrap}
+  .Agendado{background:var(--az2);color:var(--az)} .Concluído{background:#e3f4ea;color:var(--ok)}
+  .Cancelado{background:#f6e3e1;color:var(--er)} .Em.curso,.Em\ curso{background:#fdf0dc;color:var(--av)}
+  .acts{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+  .acts a,.acts button{font-size:14px;padding:7px 12px;border-radius:8px;border:1px solid var(--bd);background:#fff;color:var(--tx);text-decoration:none}
+  .acts .p{background:var(--ok);border-color:var(--ok);color:#fff}
+  h2{font-size:14px;text-transform:uppercase;letter-spacing:.04em;color:var(--mu);margin:18px 4px 8px}
+  label{display:block;font-size:13px;color:var(--mu);margin:10px 0 4px}
+  input,select,textarea{width:100%;padding:11px 12px;border:1px solid var(--bd);border-radius:9px;font-size:16px;background:#fff;color:var(--tx);font-family:inherit}
+  textarea{min-height:70px}
+  .row{display:flex;gap:10px}.row>div{flex:1}
+  .btn{width:100%;padding:14px;border:0;border-radius:10px;background:var(--az);color:#fff;font-size:16px;font-weight:600;margin-top:16px}
+  .btn.sec{background:#fff;color:var(--er);border:1px solid var(--bd)}
+  .hint{font-size:12px;margin-top:4px}.bad{color:var(--er)}.good{color:var(--ok)}
+  .kpis{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .kpi .v{font-size:22px;font-weight:700}.kpi .l{font-size:13px;color:var(--mu)}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  td,th{padding:7px 4px;border-bottom:1px solid var(--bd);text-align:left}td.r,th.r{text-align:right}
+  .vazio{text-align:center;color:var(--mu);padding:30px 10px}
+  #login{max-width:340px;margin:60px auto;text-align:center}
+  #toast{position:fixed;left:50%;bottom:80px;transform:translateX(-50%);background:#222;color:#fff;padding:10px 16px;border-radius:9px;font-size:14px;display:none;z-index:9}
+  .seg{display:flex;gap:6px;margin-bottom:6px}.seg button{flex:1;padding:8px;border:1px solid var(--bd);background:#fff;border-radius:8px;font-size:14px}
+  .seg button.on{background:var(--az);color:#fff;border-color:var(--az)}
+  .load{opacity:.5;pointer-events:none}
+</style>
+</head>
+<body>
+<header><h1>🔧 Agenda de Trabalhos</h1><button id="sair" style="display:none" onclick="sair()">Sair</button></header>
+<main id="app"></main>
+<nav id="nav" style="display:none">
+  <button data-t="agenda" class="on" onclick="ir('agenda')"><b>📅</b>Agenda</button>
+  <button data-t="novo" onclick="novo()"><b>➕</b>Novo</button>
+  <button data-t="valores" onclick="ir('valores')"><b>💶</b>Valores</button>
+</nav>
+<div id="toast"></div>
+
+<script src="config.js" onerror="void 0"></script>
+<script>
+let PIN = '', PAPEL = '', JOBS = [], TAB = 'agenda', FILTRO = 'proximos';
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const eur = v => (Number(v) || 0).toLocaleString('pt-PT', {style:'currency', currency:'EUR'});
+const hoje = () => { const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0,10); };
+const dataPT = s => { if(!s) return ''; const [y,m,d] = s.split('-'); const dt = new Date(y, m-1, d);
+  return dt.toLocaleDateString('pt-PT', {weekday:'short', day:'2-digit', month:'short'}); };
+function toast(t){ const e=$('#toast'); e.textContent=t; e.style.display='block'; clearTimeout(e._t); e._t=setTimeout(()=>e.style.display='none',2500); }
+
+/* Endereço do servidor (Google Apps Script). Pode ficar vazio: a app pede-o no 1.º acesso. */
+let API_URL = (window.AGENDA_API_URL || '');
+try { API_URL = API_URL || localStorage.getItem('api') || ''; } catch(e){}
+const DENTRO_GOOGLE = typeof google !== 'undefined' && google.script && google.script.run;
+
+function call(acao, dados){
+  document.body.classList.add('load');
+  const fim = () => document.body.classList.remove('load');
+  if (DENTRO_GOOGLE) return new Promise((ok, ko) => google.script.run
+    .withSuccessHandler(r => { fim(); ok(r); })
+    .withFailureHandler(e => { fim(); toast(e.message || 'Erro'); ko(e); })
+    .api(PIN, acao, dados || {}));
+  return fetch(API_URL, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body: JSON.stringify({ pin: PIN, acao, dados: dados || {} }) })
+    .then(r => r.json())
+    .then(j => { fim(); if (!j.ok) throw new Error(j.erro); return j.r; })
+    .catch(e => { fim(); toast(e.message || 'Sem ligação'); throw e; });
+}
+
+/* ---------- NIF português ---------- */
+function nifValido(n){
+  n = String(n).replace(/\D/g,'');
+  if (!/^[1235689]\d{8}$|^(45|7[0-9])\d{7}$/.test(n)) return false;
+  let s = 0; for (let i=0;i<8;i++) s += +n[i] * (9-i);
+  let c = 11 - (s % 11); if (c >= 10) c = 0;
+  return c === +n[8];
+}
+
+/* ---------- login ---------- */
+function ecraLogin(msg){
+  $('#nav').style.display='none'; $('#sair').style.display='none';
+  $('#app').innerHTML = `<div id="login" class="card">
+    <h2 style="margin-top:0">Entrar</h2>
+    ${!DENTRO_GOOGLE && !API_URL ? `<input id="api" placeholder="Endereço do servidor (https://script.google.com/...)" style="margin-bottom:10px">` : ''}
+    <input id="pin" type="password" inputmode="numeric" placeholder="PIN" autofocus>
+    ${msg?`<div class="hint bad">${esc(msg)}</div>`:''}
+    <button class="btn" onclick="entrar($('#pin').value)">Entrar</button></div>`;
+  $('#pin').addEventListener('keydown', e => { if(e.key==='Enter') entrar(e.target.value); });
+}
+async function entrar(p){
+  PIN = p;
+  const a = $('#api'); if (a && a.value.trim()) { API_URL = a.value.trim(); try{localStorage.setItem('api', API_URL)}catch(e){} }
+  if (!DENTRO_GOOGLE && !API_URL) return ecraLogin('Falta o endereço do servidor');
+  try {
+    const r = await call('entrar'); PAPEL = r.papel;
+    try { localStorage.setItem('pin', p); } catch(e){}
+    $('#nav').style.display='flex'; $('#sair').style.display='block';
+    JOBS = await call('listar'); ir('agenda');
+  } catch(e){ try{localStorage.removeItem('pin')}catch(_){} ecraLogin('PIN errado'); }
+}
+function sair(){ try{localStorage.removeItem('pin')}catch(e){} PIN=''; ecraLogin(); }
+
+/* ---------- navegação ---------- */
+function ir(t){ TAB=t; document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on', b.dataset.t===t));
+  if(t==='agenda') agenda(); else if(t==='valores') valores(); window.scrollTo(0,0); }
+
+/* ---------- agenda ---------- */
+function cartao(j){
+  const tel = j.telefone ? `<a href="tel:${esc(j.telefone.replace(/\s/g,''))}" onclick="event.stopPropagation()">📞 Ligar</a>` : '';
+  const map = j.morada ? `<a target="_blank" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(j.morada)}" onclick="event.stopPropagation()">📍 Mapa</a>` : '';
+  const concl = j.estado!=='Concluído' && j.estado!=='Cancelado' ? `<button class="p" onclick="event.stopPropagation();concluir('${j.id}')">✅ Concluir</button>` : '';
+  return `<div class="card job" onclick="editar('${j.id}')">
+    <div class="top"><span class="h">${esc(j.hora)} · ${esc(dataPT(j.data))}</span><span class="tag ${esc(j.estado)}">${esc(j.estado)}</span></div>
+    <div class="n">${esc(j.nome)}</div>
+    <div class="m">${esc(j.servico||'')}${j.tecnico?' · 👷 '+esc(j.tecnico):''}</div>
+    ${j.morada?`<div class="m">${esc(j.morada)}</div>`:''}
+    ${j.valor!==''?`<div class="m"><b style="color:var(--tx)">${eur(j.valor)}</b> ${j.pagamento?'· '+esc(j.pagamento):''}</div>`:''}
+    <div class="acts">${tel}${map}${concl}</div></div>`;
+}
+function agenda(){
+  const h = hoje(); const q = (window._q||'').toLowerCase();
+  let lista = JOBS.filter(j => !q || [j.nome,j.nif,j.morada,j.servico,j.telefone].join(' ').toLowerCase().includes(q));
+  const ord = (a,b) => (a.data+a.hora).localeCompare(b.data+b.hora);
+  let html = `<input placeholder="🔍 Procurar cliente, NIF, morada…" value="${esc(window._q||'')}" oninput="window._q=this.value;agenda();this.focus()" id="q">
+    <div class="seg" style="margin-top:10px">
+      <button class="${FILTRO==='proximos'?'on':''}" onclick="FILTRO='proximos';agenda()">Próximos</button>
+      <button class="${FILTRO==='anteriores'?'on':''}" onclick="FILTRO='anteriores';agenda()">Anteriores</button></div>`;
+  if (FILTRO==='proximos'){
+    const hj = lista.filter(j=>j.data===h).sort(ord);
+    const fut = lista.filter(j=>j.data>h).sort(ord);
+    const atras = lista.filter(j=>j.data<h && j.estado==='Agendado').sort(ord);
+    if(atras.length) html += `<h2 style="color:var(--er)">Por concluir (atrasados)</h2>` + atras.map(cartao).join('');
+    html += `<h2>Hoje</h2>` + (hj.length ? hj.map(cartao).join('') : `<div class="card vazio">Nada agendado para hoje</div>`);
+    html += `<h2>Próximos</h2>` + (fut.length ? fut.map(cartao).join('') : `<div class="card vazio">Sem trabalhos futuros</div>`);
+  } else {
+    const ant = lista.filter(j=>j.data<h).sort(ord).reverse();
+    html += `<h2>Anteriores</h2>` + (ant.length ? ant.map(cartao).join('') : `<div class="card vazio">Sem trabalhos anteriores</div>`);
+  }
+  $('#app').innerHTML = html;
+  const qi = $('#q'); if (window._q) { qi.setSelectionRange(qi.value.length, qi.value.length); }
+}
+
+/* ---------- formulário ---------- */
+function novo(){ formulario({ data: hoje(), hora: '09:00', duracao: '60', estado: 'Agendado' }); }
+function editar(id){ formulario(JOBS.find(j=>j.id===id)); }
+function concluir(id){ const j = JOBS.find(x=>x.id===id); formulario(Object.assign({}, j, {estado:'Concluído'}), true); }
+
+function formulario(j, focoValor){
+  TAB='novo'; document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on', b.dataset.t==='novo' && !j.id));
+  const clientes = [...new Map(JOBS.filter(x=>x.nome).map(x=>[x.nome, x])).keys()];
+  const opt = (arr, v) => arr.map(o=>`<option ${o===v?'selected':''}>${o}</option>`).join('');
+  $('#app').innerHTML = `<div class="card">
+    <h2 style="margin-top:4px">${j.id?'Editar trabalho':'Novo trabalho'}</h2>
+    <div class="row"><div><label>Data</label><input id="f_data" type="date" value="${esc(j.data)}"></div>
+      <div><label>Hora</label><input id="f_hora" type="time" value="${esc(j.hora)}"></div></div>
+    <div class="row"><div><label>Duração</label><select id="f_duracao">${[30,60,90,120,180,240].map(m=>`<option value="${m}" ${String(m)===String(j.duracao||60)?'selected':''}>${m<60?m+' min':(m/60)+' h'}</option>`).join('')}</select></div>
+      <div><label>Técnico</label><input id="f_tecnico" value="${esc(j.tecnico)}" placeholder="Nome"></div></div>
+
+    <h2>Cliente</h2>
+    <label>Contribuinte (NIF)</label>
+    <input id="f_nif" inputmode="numeric" maxlength="9" value="${esc(j.nif)}" placeholder="9 dígitos" oninput="verNif()">
+    <div id="nifmsg" class="hint"></div>
+    <label>Nome completo</label>
+    <input id="f_nome" list="lclientes" value="${esc(j.nome)}" oninput="preencherPorNome()">
+    <datalist id="lclientes">${clientes.map(c=>`<option value="${esc(c)}">`).join('')}</datalist>
+    <label>Morada</label>
+    <textarea id="f_morada" placeholder="Rua, nº, código postal, localidade">${esc(j.morada)}</textarea>
+    <label>Telefone</label>
+    <input id="f_telefone" type="tel" value="${esc(j.telefone)}">
+
+    <h2>Serviço</h2>
+    <label>Tipo de serviço</label>
+    <input id="f_servico" list="lserv" value="${esc(j.servico)}" placeholder="Ex.: Desentupimento de esgoto">
+    <datalist id="lserv">${['Desentupimento de esgoto','Desentupimento de cozinha','Desentupimento de WC','Limpeza de fossa','Inspeção vídeo','Hidrojato','Reparação de canalização'].map(s=>`<option value="${s}">`).join('')}</datalist>
+    <label>Estado</label>
+    <select id="f_estado">${opt(['Agendado','Em curso','Concluído','Cancelado'], j.estado)}</select>
+    <div class="row"><div><label>Valor (€)</label><input id="f_valor" inputmode="decimal" value="${j.valor===''||j.valor==null?'':esc(j.valor)}" placeholder="0,00"></div>
+      <div><label>Pagamento</label><select id="f_pagamento"><option value="">—</option>${opt(['Dinheiro','MB Way','Multibanco','Transferência','Por pagar'], j.pagamento)}</select></div></div>
+    <label>Notas</label>
+    <textarea id="f_notas">${esc(j.notas)}</textarea>
+    <button class="btn" onclick="guardar('${j.id||''}')">💾 Guardar</button>
+    ${j.id && PAPEL==='admin' ? `<button class="btn sec" onclick="apagar('${j.id}')">Apagar trabalho</button>` : ''}
+  </div>`;
+  verNif(true);
+  if (focoValor) setTimeout(()=>$('#f_valor').focus(), 50);
+}
+function verNif(inicial){
+  const n = $('#f_nif').value.replace(/\D/g,''), m = $('#nifmsg');
+  if (!n){ m.textContent=''; return; }
+  if (n.length < 9){ m.className='hint'; m.textContent=''; return; }
+  if (!nifValido(n)){ m.className='hint bad'; m.textContent='⚠️ NIF inválido — confirme os dígitos'; return; }
+  const ant = JOBS.filter(j=>j.nif===n).sort((a,b)=>b.atualizado.localeCompare(a.atualizado))[0];
+  m.className='hint good';
+  m.textContent = ant ? `✓ Cliente já conhecido: ${ant.nome}` : '✓ NIF válido';
+  if (ant && !inicial){
+    if(!$('#f_nome').value) $('#f_nome').value = ant.nome;
+    if(!$('#f_morada').value) $('#f_morada').value = ant.morada;
+    if(!$('#f_telefone').value) $('#f_telefone').value = ant.telefone;
+  }
+}
+function preencherPorNome(){
+  const nome = $('#f_nome').value;
+  const ant = JOBS.filter(j=>j.nome===nome).sort((a,b)=>b.atualizado.localeCompare(a.atualizado))[0];
+  if (!ant) return;
+  if(!$('#f_nif').value) $('#f_nif').value = ant.nif;
+  if(!$('#f_morada').value) $('#f_morada').value = ant.morada;
+  if(!$('#f_telefone').value) $('#f_telefone').value = ant.telefone;
+  verNif(true);
+}
+async function guardar(id){
+  const g = k => $('#f_'+k).value;
+  const d = { id, data:g('data'), hora:g('hora'), duracao:g('duracao'), tecnico:g('tecnico'), nif:g('nif'),
+    nome:g('nome'), morada:g('morada'), telefone:g('telefone'), servico:g('servico'), estado:g('estado'),
+    valor:g('valor').replace(',', '.'), pagamento:g('pagamento'), notas:g('notas') };
+  if (!d.nome.trim()) return toast('Falta o nome do cliente');
+  if (!d.data || !d.hora) return toast('Falta a data ou hora');
+  if (d.valor && isNaN(Number(d.valor))) return toast('Valor inválido');
+  JOBS = await call('guardar', d);
+  toast('Guardado ✓'); ir('agenda');
+}
+async function apagar(id){
+  if (!confirm('Apagar este trabalho? Isto não pode ser desfeito.')) return;
+  JOBS = await call('apagar', {id}); toast('Apagado'); ir('agenda');
+}
+
+/* ---------- valores ---------- */
+function valores(){
+  const meses = [...new Set(JOBS.map(j=>j.data.slice(0,7)))].sort().reverse();
+  const atual = window._mes || hoje().slice(0,7);
+  if (!meses.includes(atual)) meses.unshift(atual);
+  const js = JOBS.filter(j=>j.data.slice(0,7)===atual && j.estado==='Concluído');
+  const total = js.reduce((s,j)=>s+(Number(j.valor)||0),0);
+  const porPagar = js.filter(j=>j.pagamento==='Por pagar').reduce((s,j)=>s+(Number(j.valor)||0),0);
+  const semValor = js.filter(j=>j.valor==='').length;
+  const agrupa = k => { const m={}; js.forEach(j=>{ const c=j[k]||'—'; m[c]=(m[c]||0)+(Number(j.valor)||0); }); return Object.entries(m).sort((a,b)=>b[1]-a[1]); };
+  const nomeMes = m => { const [y,mm]=m.split('-'); return new Date(y,mm-1,1).toLocaleDateString('pt-PT',{month:'long',year:'numeric'}); };
+  $('#app').innerHTML = `
+    <select onchange="window._mes=this.value;valores()">${meses.map(m=>`<option value="${m}" ${m===atual?'selected':''}>${nomeMes(m)}</option>`).join('')}</select>
+    <div class="kpis" style="margin-top:10px">
+      <div class="card kpi"><div class="l">Faturado (concluídos)</div><div class="v">${eur(total)}</div></div>
+      <div class="card kpi"><div class="l">Trabalhos concluídos</div><div class="v">${js.length}</div></div>
+      <div class="card kpi"><div class="l">Por receber</div><div class="v" style="color:var(--av)">${eur(porPagar)}</div></div>
+      <div class="card kpi"><div class="l">Sem valor registado</div><div class="v" style="color:${semValor?'var(--er)':'inherit'}">${semValor}</div></div>
+    </div>
+    <h2>Por técnico</h2><div class="card"><table>${agrupa('tecnico').map(([k,v])=>`<tr><td>${esc(k)}</td><td class="r">${eur(v)}</td></tr>`).join('')||'<tr><td class="vazio">—</td></tr>'}</table></div>
+    <h2>Por forma de pagamento</h2><div class="card"><table>${agrupa('pagamento').map(([k,v])=>`<tr><td>${esc(k)}</td><td class="r">${eur(v)}</td></tr>`).join('')||'<tr><td class="vazio">—</td></tr>'}</table></div>
+    <h2>Trabalhos do mês</h2><div class="card"><table><tr><th>Data</th><th>Cliente</th><th>NIF</th><th class="r">Valor</th></tr>
+      ${js.sort((a,b)=>a.data.localeCompare(b.data)).map(j=>`<tr onclick="editar('${j.id}')"><td>${j.data.slice(8)}/${j.data.slice(5,7)}</td><td>${esc(j.nome)}</td><td>${esc(j.nif)}</td><td class="r">${j.valor===''?'<span class="bad">—</span>':eur(j.valor)}</td></tr>`).join('')}
+    </table></div>`;
+}
+
+/* ---------- arranque ---------- */
+let guardado = ''; try { guardado = localStorage.getItem('pin') || ''; } catch(e){}
+if (guardado) entrar(guardado); else ecraLogin();
+</script>
+</body>
+</html>
