@@ -3,10 +3,11 @@
  * Guarda os trabalhos numa folha do Google Sheets e cria eventos no
  * Google Calendar com alarmes (notificação no telemóvel).
  *
- * >>> MUDE O PIN ABAIXO antes de publicar <<<
+ * Os utilizadores e PINs estão no ficheiro Utilizadores.gs (só no Apps Script).
+ *  papel 'admin'  -> marca trabalhos, vê faturação, apaga
+ *  papel 'tecnico'-> vê os seus trabalhos e fecha-os (valor, pagamento, fatura)
+ *  faz: true      -> um admin que também faz trabalhos (recebe os avisos de técnico)
  */
-const PIN_ADMIN = '1234';   // PIN do dono (vê tudo, apaga trabalhos)
-const PIN_TECNICO = '5678'; // PIN do técnico (vê agenda, edita e coloca valores)
 const ALARMES_MIN = [60, 15]; // avisos antes do trabalho (minutos)
 
 const FOLHA = 'Trabalhos';
@@ -36,26 +37,32 @@ function doPost(e) {
 
 /* ---------- ponto de entrada único chamado pela app ---------- */
 function api(pin, acao, dados) {
-  const papel = papel_(pin);
-  if (!papel) throw new Error('PIN errado');
+  const u = utilizador_(pin);
+  if (!u) throw new Error('PIN errado');
+  const papel = u.papel;
   switch (acao) {
-    case 'entrar': return { papel: papel, jobs: listar_() }; // 1 só pedido ao entrar
-    case 'listar': return listar_();
-    case 'guardar': return guardar_(dados, papel);
-    case 'subscrever': return subscrever_(dados, papel);   // ativar notificações neste telemóvel
-    case 'aviso': return ultimoAviso_(papel);              // texto da última notificação
+    case 'entrar': return { papel: papel, nome: u.nome, trabalhadores: trabalhadores_(), jobs: visiveis_(u, listar_()) };
+    case 'listar': return visiveis_(u, listar_());
+    case 'guardar': return visiveis_(u, guardar_(dados, u));
+    case 'subscrever': return subscrever_(dados, u.nome);   // ativar notificações neste telemóvel
+    case 'aviso': return ultimoAviso_(u.nome);              // texto da última notificação
     case 'apagar':
       if (papel !== 'admin') throw new Error('Só o dono pode apagar trabalhos');
-      return apagar_(dados.id);
+      return visiveis_(u, apagar_(dados.id));
     default: throw new Error('Ação desconhecida');
   }
 }
 
-function papel_(pin) {
+function utilizador_(pin) {
   pin = String(pin || '').trim();
-  if (pin === PIN_ADMIN) return 'admin';
-  if (pin === PIN_TECNICO) return 'tecnico';
-  return null;
+  const u = UTILIZADORES.find(x => x.pin === pin);
+  return u ? { nome: u.nome, papel: u.papel, faz: u.papel === 'tecnico' || !!u.faz } : null;
+}
+function trabalhadores_() { return UTILIZADORES.filter(x => x.papel === 'tecnico' || x.faz).map(x => x.nome); }
+function admins_() { return UTILIZADORES.filter(x => x.papel === 'admin').map(x => x.nome); }
+/* Um técnico só vê os trabalhos dele e os que ainda não têm técnico */
+function visiveis_(u, jobs) {
+  return u.papel === 'admin' ? jobs : jobs.filter(j => !j.tecnico || j.tecnico === u.nome);
 }
 
 /* ---------- folha ---------- */
@@ -94,7 +101,8 @@ function linhaDe_(sh, id) {
   return -1;
 }
 
-function guardar_(d, papel) {
+function guardar_(d, u) {
+  const papel = u.papel;
   let aviso = null;
   const lock = LockService.getScriptLock();
   lock.waitLock(20000);
@@ -118,6 +126,8 @@ function guardar_(d, papel) {
       : ['data', 'hora', 'duracao', 'nome', 'nif', 'morada', 'telefone', 'servico',
         'tecnico', 'estado', 'valor', 'pagamento', 'notas', 'fatura'];
     if (papel === 'tecnico' && d.fatura === 'Sim') campos = campos.concat(['nif', 'nome']);
+    if (papel === 'tecnico' && atual.tecnico && atual.tecnico !== u.nome) throw new Error('Este trabalho é de ' + atual.tecnico);
+    if (papel === 'tecnico' && !atual.tecnico) t.tecnico = u.nome; // fica atribuído a quem o fez
     campos.forEach(k => {
       if (d[k] !== undefined) t[k] = String(d[k]).trim();
     });
@@ -135,7 +145,7 @@ function guardar_(d, papel) {
     const row = [COLS.map(c => t[c] === undefined ? '' : t[c])];
     if (linha > 0) sh.getRange(linha, 1, 1, COLS.length).setValues(row);
     else sh.appendRow(row[0]);
-    aviso = avisoPara_(papel, linha < 0 ? null : atual, t);
+    aviso = avisoPara_(u, linha < 0 ? null : atual, t);
     return listar_();
   } finally {
     lock.releaseLock();
@@ -143,18 +153,22 @@ function guardar_(d, papel) {
   }
 }
 
-/* Decide quem recebe notificação depois de guardar */
-function avisoPara_(papel, antes, t) {
+/* Decide quem recebe notificação depois de guardar: [nomes[], titulo, corpo] */
+function avisoPara_(u, antes, t) {
   const dm = t.data ? t.data.slice(8, 10) + '/' + t.data.slice(5, 7) : '';
   const onde = t.nome + (t.morada ? '\n' + t.morada : '');
-  if (papel === 'admin' && !antes && t.estado !== 'Cancelado')
-    return ['tecnico', '🔧 Novo trabalho: ' + (t.servico || 'Trabalho'), dm + ' às ' + t.hora + ' · ' + onde];
-  if (papel === 'admin' && antes && t.estado === 'Cancelado' && antes.estado !== 'Cancelado')
-    return ['tecnico', '❌ Trabalho cancelado', dm + ' às ' + t.hora + ' · ' + t.nome];
-  if (papel === 'admin' && antes && (antes.data !== t.data || antes.hora !== t.hora || antes.morada !== t.morada))
-    return ['tecnico', '📅 Trabalho alterado: ' + (t.servico || 'Trabalho'), dm + ' às ' + t.hora + ' · ' + onde];
-  if (papel === 'tecnico' && antes && t.estado === 'Concluído' && antes.estado !== 'Concluído')
-    return ['admin', '✅ Concluído: ' + t.nome, (t.valor ? Number(t.valor).toFixed(2).replace('.', ',') + ' €' : 'sem valor') +
+  const quem = nomes => nomes.filter(n => n !== u.nome);            // não avisa quem fez a alteração
+  const equipa = tec => quem(tec ? [tec] : trabalhadores_());          // técnico escolhido, ou todos
+  if (u.papel === 'admin') {
+    if (!antes && t.estado !== 'Cancelado')
+      return [equipa(t.tecnico), '🔧 Novo trabalho: ' + (t.servico || 'Trabalho'), dm + ' às ' + t.hora + ' · ' + onde];
+    if (antes && t.estado === 'Cancelado' && antes.estado !== 'Cancelado')
+      return [equipa(t.tecnico || antes.tecnico), '❌ Trabalho cancelado', dm + ' às ' + t.hora + ' · ' + t.nome];
+    if (antes && t.estado !== 'Concluído' && (antes.data !== t.data || antes.hora !== t.hora || antes.morada !== t.morada || antes.tecnico !== t.tecnico))
+      return [equipa(t.tecnico), '📅 Trabalho alterado: ' + (t.servico || 'Trabalho'), dm + ' às ' + t.hora + ' · ' + onde];
+  }
+  if (antes && t.estado === 'Concluído' && antes.estado !== 'Concluído')
+    return [quem(admins_()), '✅ Concluído por ' + u.nome + ': ' + t.nome, (t.valor ? Number(t.valor).toFixed(2).replace('.', ',') + ' €' : 'sem valor') +
       (t.pagamento ? ' · ' + t.pagamento : '') + (t.fatura === 'Sim' ? ' · 🧾 com fatura' : '')];
   return null;
 }

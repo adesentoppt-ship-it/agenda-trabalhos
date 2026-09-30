@@ -90,25 +90,26 @@ function jwtVapid_(audiencia) {
 function folhaAvisos_() {
   const ss = SpreadsheetApp.getActive();
   let sh = ss.getSheetByName(FOLHA_AVISOS);
-  if (!sh) { sh = ss.insertSheet(FOLHA_AVISOS); sh.appendRow(['endpoint', 'papel', 'criado']); sh.setFrozenRows(1); }
+  if (!sh) { sh = ss.insertSheet(FOLHA_AVISOS); sh.appendRow(['endpoint', 'utilizador', 'criado']); sh.setFrozenRows(1); }
   return sh;
 }
-function subscrever_(d, papel) {
+function subscrever_(d, nome) {
   const ep = String(d.endpoint || '');
   if (!/^https:\/\//.test(ep)) throw new Error('Subscrição inválida');
   const sh = folhaAvisos_(), vals = sh.getDataRange().getValues();
-  for (let i = 1; i < vals.length; i++) if (vals[i][0] === ep) { sh.getRange(i + 1, 2).setValue(papel); return { ok: true }; }
-  sh.appendRow([ep, papel, new Date()]);
+  for (let i = 1; i < vals.length; i++) if (vals[i][0] === ep) { sh.getRange(i + 1, 2).setValue(nome); return { ok: true }; }
+  sh.appendRow([ep, nome, new Date()]);
   return { ok: true };
 }
 
 /* Guarda a mensagem e "acorda" os telemóveis; o telemóvel vem buscar o texto (acao 'aviso') */
-function notificar_(papelDestino, titulo, corpo) {
+function notificar_(nomes, titulo, corpo) {
+  if (!nomes || !nomes.length) return;
   const props = PropertiesService.getScriptProperties();
-  props.setProperty('aviso_' + papelDestino, JSON.stringify({ titulo: titulo, corpo: corpo, t: Date.now() }));
+  nomes.forEach(n => props.setProperty('aviso_' + n, JSON.stringify({ titulo: titulo, corpo: corpo, t: Date.now() })));
   const sh = folhaAvisos_(), vals = sh.getDataRange().getValues(), apagar = [];
   for (let i = 1; i < vals.length; i++) {
-    if (vals[i][1] !== papelDestino) continue;
+    if (nomes.indexOf(vals[i][1]) < 0) continue;
     const ep = vals[i][0];
     try {
       const aud = ep.match(/^https:\/\/[^/]+/)[0];
@@ -122,8 +123,8 @@ function notificar_(papelDestino, titulo, corpo) {
   }
   apagar.reverse().forEach(l => sh.deleteRow(l));
 }
-function ultimoAviso_(papel) {
-  const v = PropertiesService.getScriptProperties().getProperty('aviso_' + papel);
+function ultimoAviso_(nome) {
+  const v = PropertiesService.getScriptProperties().getProperty('aviso_' + nome);
   return v ? JSON.parse(v) : null;
 }
 
@@ -139,7 +140,7 @@ function lembretes() {
     const ini = Utilities.parseDate(o.data + ' ' + o.hora, tz, 'yyyy-MM-dd HH:mm').getTime();
     const falta = (ini - agora) / 60000;
     if (falta > 0 && falta <= 65) {
-      notificar_('tecnico', '⏰ Daqui a ' + Math.round(falta) + ' min: ' + (o.servico || 'Trabalho'),
+      notificar_(o.tecnico ? [o.tecnico] : trabalhadores_(), '⏰ Daqui a ' + Math.round(falta) + ' min: ' + (o.servico || 'Trabalho'),
         o.hora + ' · ' + o.nome + (o.morada ? '\n' + o.morada : ''));
       sh.getRange(i + 2, iAv + 1).setValue('sim');
     }

@@ -60,7 +60,7 @@
 </style>
 </head>
 <body>
-<header><h1>🔧 Agenda de Trabalhos</h1><button id="sair" style="display:none" onclick="sair()">Sair</button></header>
+<header><h1>🔧 Agenda<span id="quem" style="font-weight:400;opacity:.85"></span></h1><button id="sair" style="display:none" onclick="sair()">Sair</button></header>
 <main id="app"></main>
 <nav id="nav" style="display:none">
   <button data-t="agenda" class="on" onclick="ir('agenda')"><b>📅</b>Agenda</button>
@@ -72,7 +72,7 @@
 
 <script src="config.js" onerror="void 0"></script>
 <script>
-let PIN = '', PAPEL = '', JOBS = [], TAB = 'agenda', FILTRO = 'proximos';
+let PIN = '', PAPEL = '', NOME = '', TRAB = [], JOBS = [], TAB = 'agenda', FILTRO = 'proximos';
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const eur = v => (Number(v) || 0).toLocaleString('pt-PT', {style:'currency', currency:'EUR'});
@@ -109,7 +109,7 @@ function call(acao, dados, silencioso){
       if (!e.servidor) e.message = e.name === 'AbortError' ? 'O servidor demorou demasiado. Tente de novo.' : 'Sem ligação à internet. Tente de novo.';
       toast(e.message); throw e; });
 }
-function setJobs(j){ JOBS = j || []; try { localStorage.setItem('cache', JSON.stringify({pin: PIN, papel: PAPEL, jobs: JOBS})); } catch(e){} }
+function setJobs(j){ JOBS = j || []; try { localStorage.setItem('cache', JSON.stringify({pin: PIN, papel: PAPEL, nome: NOME, trab: TRAB, jobs: JOBS})); } catch(e){} }
 
 /* ---------- NIF português ---------- */
 function nifValido(n){
@@ -159,7 +159,9 @@ async function instalarApp(){ if (!PEDIDO_INSTALAR) return; PEDIDO_INSTALAR.prom
 async function cartaoNotif(){
   const el = $('#notifbox'); if (!el) return;
   const e = await estadoNotif();
-  const quem = PAPEL === 'tecnico' ? 'quando o chefe marcar ou mudar um trabalho, e 1 hora antes de cada trabalho' : 'quando o técnico concluir um trabalho';
+  const faz = TRAB.includes(NOME);
+  const quem = PAPEL === 'tecnico' ? 'quando lhe marcarem ou mudarem um trabalho, e 1 hora antes de cada trabalho'
+    : faz ? 'quando lhe marcarem um trabalho, 1 hora antes, e quando alguém concluir um trabalho' : 'quando um trabalho for concluído';
   if (e === 'desligado') el.innerHTML = `<div class="card notif"><b>🔔 Ativar notificações neste telemóvel</b>Recebe um alerta ${quem}.<button class="btn" onclick="ativarNotif()">Ativar notificações</button></div>`;
   else if (e === 'ios-instalar') el.innerHTML = `<div class="card notif"><b>🔔 Para receber notificações no iPhone</b>Toque em <b style="display:inline">Partilhar ⬆️</b> → <b style="display:inline">Adicionar ao ecrã principal</b>. Depois abra a app pelo ícone novo e ative aqui.</div>`;
   else if (e === 'bloqueado') el.innerHTML = `<div class="card notif"><b>🔕 Notificações bloqueadas</b>Nas definições do telemóvel/navegador, permita notificações para esta app.</div>`;
@@ -179,6 +181,7 @@ function ecraLogin(msg){
   $('#pin').addEventListener('keydown', e => { if(e.key==='Enter') entrar(e.target.value); });
 }
 function mostrarApp(){
+  $('#quem').textContent = NOME ? ' · ' + NOME : '';
   $('#nav').style.display='flex'; $('#sair').style.display='block';
   document.querySelectorAll('nav button[data-t=novo], nav button[data-t=valores]').forEach(b=>b.style.display = PAPEL==='tecnico' ? 'none' : '');
 }
@@ -188,10 +191,10 @@ async function entrar(p){
   if (!DENTRO_GOOGLE && !API_URL) return ecraLogin('Falta o endereço do servidor');
   let cache = null; try { cache = JSON.parse(localStorage.getItem('cache') || 'null'); } catch(e){}
   const temCache = cache && cache.pin === PIN;
-  if (temCache){ PAPEL = cache.papel; JOBS = cache.jobs || []; mostrarApp(); ir('agenda'); }  // mostra logo o que já tinha
+  if (temCache){ PAPEL = cache.papel; NOME = cache.nome || ''; TRAB = cache.trab || []; JOBS = cache.jobs || []; mostrarApp(); ir('agenda'); }  // mostra logo o que já tinha
   try {
     const r = await call('entrar', {}, temCache);
-    PAPEL = r.papel; setJobs(r.jobs);
+    PAPEL = r.papel; NOME = r.nome || ''; TRAB = r.trabalhadores || []; setJobs(r.jobs);
     try { localStorage.setItem('pin', PIN); } catch(e){}
     renovarSub();
     mostrarApp();
@@ -201,7 +204,7 @@ async function entrar(p){
     else if (!temCache) ecraLogin(e.message);
   }
 }
-function sair(){ try{localStorage.removeItem('pin'); localStorage.removeItem('cache')}catch(e){} PIN=''; ecraLogin(); }
+function sair(){ try{localStorage.removeItem('pin'); localStorage.removeItem('cache')}catch(e){} PIN=''; NOME=''; $('#quem').textContent=''; ecraLogin(); }
 
 /* ---------- navegação ---------- */
 function ir(t){ TAB=t; document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on', b.dataset.t===t));
@@ -288,7 +291,7 @@ function formulario(j, focoValor){
     <div class="row"><div><label>Data</label><input id="f_data" type="date" value="${esc(j.data)}"></div>
       <div><label>Hora</label><input id="f_hora" type="time" value="${esc(j.hora)}"></div></div>
     <div class="row"><div><label>Duração</label><select id="f_duracao">${[30,60,90,120,180,240].map(m=>`<option value="${m}" ${String(m)===String(j.duracao||60)?'selected':''}>${m<60?m+' min':(m/60)+' h'}</option>`).join('')}</select></div>
-      <div><label>Técnico</label><input id="f_tecnico" value="${esc(j.tecnico)}" placeholder="Nome"></div></div>
+      <div><label>Técnico</label><select id="f_tecnico"><option value="">— Qualquer um —</option>${[...new Set(TRAB.concat(j.tecnico?[j.tecnico]:[]))].map(n=>`<option ${n===j.tecnico?'selected':''}>${esc(n)}</option>`).join('')}</select></div></div>
 
     <h2>Cliente</h2>
     <label>Contribuinte (NIF) <span style="font-size:12px">— só se quiser fatura</span></label>
