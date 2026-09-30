@@ -4,9 +4,10 @@
 <base target="_top">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-<meta name="theme-color" content="#0b5cab">
+<meta name="theme-color" content="#08183a">
 <link rel="manifest" href="manifest.json">
-<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Agenda">
 <style>
@@ -52,6 +53,12 @@
   .seg button.on{background:var(--az);color:#fff;border-color:var(--az)}
   #spin{position:fixed;inset:0;background:rgba(244,246,249,.6);display:none;align-items:center;justify-content:center;flex-direction:column;gap:10px;z-index:8;font-size:14px;color:var(--mu)}
   #spin.on{display:flex}
+  #splash{position:fixed;inset:0;z-index:20;background:radial-gradient(circle at 50% 40%,#123a86,#08183a 70%);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;transition:opacity .5s}
+  #splash img{width:min(72vw,340px);height:auto;animation:pop .6s ease-out}
+  #splash div{color:#fff;font-size:20px;font-weight:700;letter-spacing:.02em;opacity:.95}
+  #splash.fora{opacity:0;pointer-events:none}
+  @keyframes pop{from{transform:scale(.85);opacity:0}to{transform:scale(1);opacity:1}}
+  .logo-login{width:150px;height:auto;display:block;margin:-10px auto 6px}
   .notif{background:#fff8e6;border-color:#f3d48a}
   .notif b{display:block;margin-bottom:4px}
   .notif .btn{margin-top:10px;padding:11px;background:var(--av)}
@@ -61,6 +68,7 @@
 </head>
 <body>
 <header><h1>🔧 Agenda<span id="quem" style="font-weight:400;opacity:.85"></span></h1><button id="sair" style="display:none" onclick="sair()">Sair</button></header>
+<div id="splash"><img src="logo.webp" alt="Desentupimentos"><div>Agenda de Trabalhos</div></div>
 <main id="app"></main>
 <nav id="nav" style="display:none">
   <button data-t="agenda" class="on" onclick="ir('agenda')"><b>📅</b>Agenda</button>
@@ -173,6 +181,7 @@ async function cartaoNotif(){
 function ecraLogin(msg){
   $('#nav').style.display='none'; $('#sair').style.display='none';
   $('#app').innerHTML = `<div id="login" class="card">
+    ${DENTRO_GOOGLE ? '' : '<img class="logo-login" src="logo.webp" alt="">'}
     <h2 style="margin-top:0">Entrar</h2>
     ${!DENTRO_GOOGLE && !API_URL ? `<input id="api" placeholder="Endereço do servidor (https://script.google.com/...)" style="margin-bottom:10px">` : ''}
     <input id="pin" type="password" inputmode="numeric" placeholder="PIN" autofocus>
@@ -422,6 +431,7 @@ document.addEventListener('visibilitychange', async () => {
 });
 
 /* ---------- arranque ---------- */
+setTimeout(() => { const sp = $('#splash'); if (sp) { sp.classList.add('fora'); setTimeout(() => sp.remove(), 600); } }, DENTRO_GOOGLE ? 0 : 1600);
 let guardado = ''; try { guardado = localStorage.getItem('pin') || ''; } catch(e){}
 if (guardado) entrar(guardado); else ecraLogin();
 </script>

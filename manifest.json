@@ -4,11 +4,12 @@
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#f4f6f9",
-  "theme_color": "#0b5cab",
+  "background_color": "#08183a",
+  "theme_color": "#08183a",
   "lang": "pt-PT",
   "icons": [
-    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
-    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ]
 }
