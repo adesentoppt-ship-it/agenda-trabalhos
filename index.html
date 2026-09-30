@@ -116,6 +116,7 @@ async function entrar(p){
     const r = await call('entrar'); PAPEL = r.papel;
     try { localStorage.setItem('pin', p); } catch(e){}
     $('#nav').style.display='flex'; $('#sair').style.display='block';
+    document.querySelectorAll('nav button[data-t=novo], nav button[data-t=valores]').forEach(b=>b.style.display = PAPEL==='tecnico' ? 'none' : '');
     JOBS = await call('listar'); ir('agenda');
   } catch(e){ try{localStorage.removeItem('pin')}catch(_){} ecraLogin('PIN errado'); }
 }
@@ -166,7 +167,19 @@ function novo(){ formulario({ data: hoje(), hora: '09:00', duracao: '60', estado
 function editar(id){ formulario(JOBS.find(j=>j.id===id)); }
 function concluir(id){ const j = JOBS.find(x=>x.id===id); formulario(Object.assign({}, j, {estado:'Concluído'}), true); }
 
+function blocoValor(j){
+  const opt = (arr, v) => arr.map(o=>`<option ${o===v?'selected':''}>${o}</option>`).join('');
+  return `<div id="blocoValor" style="display:${j.estado==='Concluído'?'block':'none'}">
+    <div class="row"><div><label>Valor do trabalho (€)</label><input id="f_valor" inputmode="decimal" value="${j.valor===''||j.valor==null?'':esc(j.valor)}" placeholder="0,00"></div>
+      <div><label>Pagamento</label><select id="f_pagamento"><option value="">—</option>${opt(['Dinheiro','MB Way','Multibanco','Transferência','Por pagar'], j.pagamento)}</select></div></div></div>`;
+}
+function mostrarValor(){
+  const c = $('#f_estado').value === 'Concluído';
+  $('#blocoValor').style.display = c ? 'block' : 'none';
+  if (c) setTimeout(()=>$('#f_valor').focus(), 50);
+}
 function formulario(j, focoValor){
+  if (PAPEL === 'tecnico') return formTecnico(j, focoValor);
   TAB='novo'; document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on', b.dataset.t==='novo' && !j.id));
   const clientes = [...new Map(JOBS.filter(x=>x.nome).map(x=>[x.nome, x])).keys()];
   const opt = (arr, v) => arr.map(o=>`<option ${o===v?'selected':''}>${o}</option>`).join('');
@@ -194,15 +207,35 @@ function formulario(j, focoValor){
     <input id="f_servico" list="lserv" value="${esc(j.servico)}" placeholder="Ex.: Desentupimento de esgoto">
     <datalist id="lserv">${['Desentupimento de esgoto','Desentupimento de cozinha','Desentupimento de WC','Limpeza de fossa','Inspeção vídeo','Hidrojato','Reparação de canalização'].map(s=>`<option value="${s}">`).join('')}</datalist>
     <label>Estado</label>
-    <select id="f_estado">${opt(['Agendado','Em curso','Concluído','Cancelado'], j.estado)}</select>
-    <div class="row"><div><label>Valor (€)</label><input id="f_valor" inputmode="decimal" value="${j.valor===''||j.valor==null?'':esc(j.valor)}" placeholder="0,00"></div>
-      <div><label>Pagamento</label><select id="f_pagamento"><option value="">—</option>${opt(['Dinheiro','MB Way','Multibanco','Transferência','Por pagar'], j.pagamento)}</select></div></div>
+    <select id="f_estado" onchange="mostrarValor()">${opt(['Agendado','Em curso','Concluído','Cancelado'], j.estado)}</select>
+    ${blocoValor(j)}
     <label>Notas</label>
     <textarea id="f_notas">${esc(j.notas)}</textarea>
     <button class="btn" onclick="guardar('${j.id||''}')">💾 Guardar</button>
-    ${j.id && PAPEL==='admin' ? `<button class="btn sec" onclick="apagar('${j.id}')">Apagar trabalho</button>` : ''}
+    ${j.id ? `<button class="btn sec" onclick="apagar('${j.id}')">Apagar trabalho</button>` : ''}
   </div>`;
   verNif(true);
+  if (focoValor) setTimeout(()=>$('#f_valor').focus(), 50);
+}
+function formTecnico(j, focoValor){
+  TAB='novo';
+  const opt = (arr, v) => arr.map(o=>`<option ${o===v?'selected':''}>${o}</option>`).join('');
+  const linha = (l, v) => v ? `<div class="m"><b style="color:var(--tx)">${l}:</b> ${esc(v)}</div>` : '';
+  $('#app').innerHTML = `<div class="card">
+    <h2 style="margin-top:4px">${esc(j.hora)} · ${esc(dataPT(j.data))}</h2>
+    <div class="n" style="font-size:18px;font-weight:700">${esc(j.nome)}</div>
+    ${linha('Contribuinte', j.nif)}${linha('Morada', j.morada)}${linha('Telefone', j.telefone)}${linha('Serviço', j.servico)}
+    <div class="acts">${j.telefone?`<a href="tel:${esc(j.telefone.replace(/\s/g,''))}">📞 Ligar</a>`:''}${j.morada?`<a target="_blank" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(j.morada)}">📍 Mapa</a>`:''}</div>
+  </div>
+  <div class="card">
+    <h2 style="margin-top:4px">Fechar trabalho</h2>
+    <label>Estado</label>
+    <select id="f_estado" onchange="mostrarValor()">${opt(['Agendado','Em curso','Concluído'], j.estado)}</select>
+    ${blocoValor(j)}
+    <label>Notas</label>
+    <textarea id="f_notas" placeholder="O que foi feito, observações…">${esc(j.notas)}</textarea>
+    <button class="btn" onclick="guardar('${j.id}')">💾 Guardar</button>
+  </div>`;
   if (focoValor) setTimeout(()=>$('#f_valor').focus(), 50);
 }
 function verNif(inicial){
@@ -229,13 +262,18 @@ function preencherPorNome(){
   verNif(true);
 }
 async function guardar(id){
-  const g = k => $('#f_'+k).value;
-  const d = { id, data:g('data'), hora:g('hora'), duracao:g('duracao'), tecnico:g('tecnico'), nif:g('nif'),
-    nome:g('nome'), morada:g('morada'), telefone:g('telefone'), servico:g('servico'), estado:g('estado'),
-    valor:g('valor').replace(',', '.'), pagamento:g('pagamento'), notas:g('notas') };
-  if (!d.nome.trim()) return toast('Falta o nome do cliente');
-  if (!d.data || !d.hora) return toast('Falta a data ou hora');
-  if (d.valor && isNaN(Number(d.valor))) return toast('Valor inválido');
+  const g = k => { const e = $('#f_'+k); return e ? e.value : undefined; };
+  const concl = g('estado') === 'Concluído';
+  const d = { id, estado:g('estado'), notas:g('notas') };
+  if (concl){ d.valor = g('valor').replace(',', '.').trim(); d.pagamento = g('pagamento'); }
+  if (PAPEL !== 'tecnico') Object.assign(d, { data:g('data'), hora:g('hora'), duracao:g('duracao'), tecnico:g('tecnico'),
+    nif:g('nif'), nome:g('nome'), morada:g('morada'), telefone:g('telefone'), servico:g('servico') });
+  if (PAPEL !== 'tecnico'){
+    if (!d.nome.trim()) return toast('Falta o nome do cliente');
+    if (!d.data || !d.hora) return toast('Falta a data ou hora');
+  }
+  if (concl && !d.valor) return toast('Coloque o valor do trabalho');
+  if (concl && isNaN(Number(d.valor))) return toast('Valor inválido');
   JOBS = await call('guardar', d);
   toast('Guardado ✓'); ir('agenda');
 }

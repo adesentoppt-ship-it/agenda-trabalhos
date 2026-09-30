@@ -106,8 +106,13 @@ function guardar_(d, papel) {
       atual = { id: Utilities.getUuid().slice(0, 8), criado: agora, eventoId: '' };
     }
     const t = Object.assign({}, atual);
-    ['data', 'hora', 'duracao', 'nome', 'nif', 'morada', 'telefone', 'servico',
-      'tecnico', 'estado', 'valor', 'pagamento', 'notas'].forEach(k => {
+    // O dono marca o trabalho (cliente, NIF, morada, data). O técnico só fecha: estado, valor, pagamento, notas.
+    if (papel === 'tecnico' && linha < 0) throw new Error('Só o dono pode criar trabalhos');
+    const campos = papel === 'tecnico'
+      ? ['estado', 'valor', 'pagamento', 'notas']
+      : ['data', 'hora', 'duracao', 'nome', 'nif', 'morada', 'telefone', 'servico',
+        'tecnico', 'estado', 'valor', 'pagamento', 'notas'];
+    campos.forEach(k => {
       if (d[k] !== undefined) t[k] = String(d[k]).trim();
     });
     if (!t.data || !t.hora) throw new Error('Falta a data ou a hora');
