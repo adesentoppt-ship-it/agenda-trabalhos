@@ -13,7 +13,8 @@ const ALARMES_MIN = [60, 15]; // avisos antes do trabalho (minutos)
 const FOLHA = 'Trabalhos';
 const COLS = ['id', 'data', 'hora', 'duracao', 'nome', 'nif', 'morada', 'telefone',
   'servico', 'tecnico', 'estado', 'valor', 'pagamento', 'notas',
-  'eventoId', 'criado', 'atualizado', 'fatura', 'lembrado'];
+  'eventoId', 'criado', 'atualizado', 'fatura', 'lembrado', 'iva', 'total', 'orcamento'];
+const IVA_TAXA = 0.23;
 
 function doGet() {
   return HtmlService.createHtmlOutputFromFile('Index')
@@ -89,6 +90,7 @@ function listar_() {
     const o = {};
     COLS.forEach((c, i) => o[c] = r[i]);
     o.valor = o.valor === '' ? '' : Number(String(o.valor).replace(',', '.'));
+    o.orcamento = o.orcamento === '' || o.orcamento === undefined ? '' : Number(String(o.orcamento).replace(',', '.'));
     return o;
   });
 }
@@ -122,9 +124,9 @@ function guardar_(d, u) {
     if (papel === 'tecnico' && linha < 0) throw new Error('Só o dono pode criar trabalhos');
     // Contribuinte: o técnico só o coloca no fim, e só se o cliente quiser fatura.
     let campos = papel === 'tecnico'
-      ? ['estado', 'valor', 'pagamento', 'notas', 'fatura']
+      ? ['estado', 'valor', 'pagamento', 'notas', 'fatura', 'orcamento']
       : ['data', 'hora', 'duracao', 'nome', 'nif', 'morada', 'telefone', 'servico',
-        'tecnico', 'estado', 'valor', 'pagamento', 'notas', 'fatura'];
+        'tecnico', 'estado', 'valor', 'pagamento', 'notas', 'fatura', 'orcamento'];
     if (papel === 'tecnico' && d.fatura === 'Sim') campos = campos.concat(['nif', 'nome']);
     if (papel === 'tecnico' && atual.tecnico && atual.tecnico !== u.nome) throw new Error('Este trabalho é de ' + atual.tecnico);
     if (papel === 'tecnico' && !atual.tecnico) t.tecnico = u.nome; // fica atribuído a quem o fez
@@ -136,6 +138,11 @@ function guardar_(d, u) {
     t.nif = String(t.nif || '').replace(/\D/g, '');
     if (t.fatura === 'Sim' && t.estado === 'Concluído' && t.nif.length !== 9) throw new Error('Com fatura é preciso o contribuinte (9 dígitos)');
     t.valor = (t.valor === undefined || t.valor === null || String(t.valor).trim() === '') ? '' : String(Number(String(t.valor).replace(',', '.')) || 0);
+    t.orcamento = (t.orcamento === undefined || String(t.orcamento).trim() === '') ? '' : String(Number(String(t.orcamento).replace(',', '.')) || 0);
+    // IVA 23% só com fatura: o valor do técnico é SEM IVA; o cliente paga valor + IVA
+    const base = Number(t.valor) || 0;
+    t.iva = (t.fatura === 'Sim' && t.valor !== '') ? (Math.round(base * IVA_TAXA * 100) / 100).toFixed(2) : (t.valor !== '' ? '0.00' : '');
+    t.total = t.valor !== '' ? (base + (Number(t.iva) || 0)).toFixed(2) : '';
     t.estado = t.estado || 'Agendado';
     t.atualizado = agora;
 
@@ -167,9 +174,14 @@ function avisoPara_(u, antes, t) {
     if (antes && t.estado !== 'Concluído' && (antes.data !== t.data || antes.hora !== t.hora || antes.morada !== t.morada || antes.tecnico !== t.tecnico))
       return [equipa(t.tecnico), '📅 Trabalho alterado: ' + (t.servico || 'Trabalho'), dm + ' às ' + t.hora + ' · ' + onde];
   }
+  const eur = v => Number(v).toFixed(2).replace('.', ',') + ' €';
   if (antes && t.estado === 'Concluído' && antes.estado !== 'Concluído')
-    return [quem(admins_()), '✅ Concluído por ' + u.nome + ': ' + t.nome, (t.valor ? Number(t.valor).toFixed(2).replace('.', ',') + ' €' : 'sem valor') +
-      (t.pagamento ? ' · ' + t.pagamento : '') + (t.fatura === 'Sim' ? ' · 🧾 com fatura' : '')];
+    return [quem(admins_()), '✅ Concluído por ' + u.nome + ': ' + t.nome,
+      (t.valor === '' ? 'sem valor' : t.fatura === 'Sim'
+        ? eur(t.valor) + ' + IVA ' + eur(t.iva) + ' = ' + eur(t.total) + ' · 🧾 fatura'
+        : eur(t.valor) + ' (sem fatura)') + (t.pagamento ? ' · ' + t.pagamento : '')];
+  if (u.papel === 'tecnico' && t.estado === 'Orçamento dado' && (!antes || antes.estado !== 'Orçamento dado'))
+    return [quem(admins_()), '💬 Orçamento dado por ' + u.nome + ': ' + t.nome, t.orcamento ? eur(t.orcamento) : 'sem valor indicado'];
   return null;
 }
 
@@ -197,7 +209,7 @@ function sincronizarEvento_(t) {
   const tz = Session.getScriptTimeZone();
   const inicio = Utilities.parseDate(t.data + ' ' + t.hora, tz, 'yyyy-MM-dd HH:mm');
   const fim = new Date(inicio.getTime() + (Number(t.duracao) || 60) * 60000);
-  const titulo = (t.estado === 'Concluído' ? '✅ ' : '🔧 ') + (t.servico || 'Trabalho') + ' – ' + t.nome;
+  const titulo = (t.estado === 'Concluído' ? '✅ ' : t.estado === 'Orçamento dado' ? '💬 ' : '🔧 ') + (t.servico || 'Trabalho') + ' – ' + t.nome;
   const desc = [
     'Cliente: ' + t.nome,
     t.nif ? 'NIF: ' + t.nif : '',
