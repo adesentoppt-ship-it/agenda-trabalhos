@@ -90,9 +90,22 @@ function listar_() {
     const o = {};
     COLS.forEach((c, i) => o[c] = r[i]);
     o.valor = o.valor === '' ? '' : Number(String(o.valor).replace(',', '.'));
-    o.orcamento = o.orcamento === '' || o.orcamento === undefined ? '' : Number(String(o.orcamento).replace(',', '.'));
+    o.orcamentos = lerOrcs_(o.orcamento);
     return o;
   });
+}
+
+/* Orçamentos: lista [{d: descrição, v: valor, a: aceite}] guardada em JSON na coluna 'orcamento' */
+function lerOrcs_(txt) {
+  txt = String(txt || '').trim();
+  if (!txt) return [];
+  if (txt.charAt(0) === '[') { try { return JSON.parse(txt); } catch (e) { return []; } }
+  const n = Number(txt.replace(',', '.')); return n ? [{ d: '', v: n, a: false }] : []; // formato antigo (1 valor)
+}
+function limparOrcs_(lista) {
+  if (!Array.isArray(lista)) return [];
+  return lista.slice(0, 20).map(o => ({ d: String(o.d || '').trim().slice(0, 120), v: Math.round((Number(String(o.v).replace(',', '.')) || 0) * 100) / 100, a: !!o.a }))
+    .filter(o => o.d || o.v);
 }
 
 function linhaDe_(sh, id) {
@@ -124,9 +137,9 @@ function guardar_(d, u) {
     if (papel === 'tecnico' && linha < 0) throw new Error('Só o dono pode criar trabalhos');
     // Contribuinte: o técnico só o coloca no fim, e só se o cliente quiser fatura.
     let campos = papel === 'tecnico'
-      ? ['estado', 'valor', 'pagamento', 'notas', 'fatura', 'orcamento']
+      ? ['estado', 'valor', 'pagamento', 'notas', 'fatura']
       : ['data', 'hora', 'duracao', 'nome', 'nif', 'morada', 'telefone', 'servico',
-        'tecnico', 'estado', 'valor', 'pagamento', 'notas', 'fatura', 'orcamento'];
+        'tecnico', 'estado', 'valor', 'pagamento', 'notas', 'fatura'];
     if (papel === 'tecnico' && d.fatura === 'Sim') campos = campos.concat(['nif', 'nome']);
     if (papel === 'tecnico' && atual.tecnico && atual.tecnico !== u.nome) throw new Error('Este trabalho é de ' + atual.tecnico);
     if (papel === 'tecnico' && !atual.tecnico) t.tecnico = u.nome; // fica atribuído a quem o fez
@@ -138,7 +151,7 @@ function guardar_(d, u) {
     t.nif = String(t.nif || '').replace(/\D/g, '');
     if (t.fatura === 'Sim' && t.estado === 'Concluído' && t.nif.length !== 9) throw new Error('Com fatura é preciso o contribuinte (9 dígitos)');
     t.valor = (t.valor === undefined || t.valor === null || String(t.valor).trim() === '') ? '' : String(Number(String(t.valor).replace(',', '.')) || 0);
-    t.orcamento = (t.orcamento === undefined || String(t.orcamento).trim() === '') ? '' : String(Number(String(t.orcamento).replace(',', '.')) || 0);
+    if (d.orcamentos !== undefined) { const l = limparOrcs_(d.orcamentos); t.orcamento = l.length ? JSON.stringify(l) : ''; }
     // IVA 23% só com fatura: o valor do técnico é SEM IVA; o cliente paga valor + IVA
     const base = Number(t.valor) || 0;
     t.iva = (t.fatura === 'Sim' && t.valor !== '') ? (Math.round(base * IVA_TAXA * 100) / 100).toFixed(2) : (t.valor !== '' ? '0.00' : '');
@@ -181,7 +194,8 @@ function avisoPara_(u, antes, t) {
         ? eur(t.valor) + ' + IVA ' + eur(t.iva) + ' = ' + eur(t.total) + ' · 🧾 fatura'
         : eur(t.valor) + ' (sem fatura)') + (t.pagamento ? ' · ' + t.pagamento : '')];
   if (u.papel === 'tecnico' && t.estado === 'Orçamento dado' && (!antes || antes.estado !== 'Orçamento dado'))
-    return [quem(admins_()), '💬 Orçamento dado por ' + u.nome + ': ' + t.nome, t.orcamento ? eur(t.orcamento) : 'sem valor indicado'];
+    return [quem(admins_()), '💬 Orçamento dado por ' + u.nome + ': ' + t.nome,
+      lerOrcs_(t.orcamento).map(o => (o.d ? o.d + ' ' : '') + eur(o.v)).join(' · ') || 'sem valor indicado'];
   return null;
 }
 

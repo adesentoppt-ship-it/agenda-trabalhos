@@ -31,6 +31,10 @@
   .tag{font-size:12px;padding:2px 8px;border-radius:99px;font-weight:600;white-space:nowrap}
   .Agendado{background:var(--az2);color:var(--az)} .Concluído{background:#e3f4ea;color:var(--ok)}
   .Cancelado{background:#f6e3e1;color:var(--er)} .Orçamento{background:#efe7fb;color:#6b3fb3}
+  .orc{display:flex;gap:6px;margin-top:8px}.orc input:first-child{flex:2}.orc input:nth-child(2){flex:1}
+  .orc button,.addorc{border:1px solid var(--bd);background:#fff;border-radius:9px;padding:0 12px;font-size:16px}
+  .addorc{width:100%;padding:10px;margin-top:8px;color:var(--az);font-weight:600;font-size:15px}
+  .aceite{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--bd);font-size:15px}.aceite input{width:22px;height:22px}
   .ivainfo{font-size:13px;margin-top:6px;padding:8px 10px;background:var(--az2);border-radius:8px;color:var(--tx)} .Em.curso,.Em\ curso{background:#fdf0dc;color:var(--av)}
   .acts{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
   .acts a,.acts button{font-size:14px;padding:7px 12px;border-radius:8px;border:1px solid var(--bd);background:#fff;color:var(--tx);text-decoration:none}
@@ -237,7 +241,7 @@ function cartao(j){
     <div class="m">${esc(j.servico||'')}${j.tecnico?' · 👷 '+esc(j.tecnico):''}</div>
     ${j.morada?`<div class="m">${esc(j.morada)}</div>`:''}
     ${j.estado==='Concluído'&&j.valor!==''&&j.valor!=null?`<div class="m"><b style="color:var(--tx)">${eur(totalDe(j))}</b>${j.fatura==='Sim'?` <span style="font-size:12px">(${eur(j.valor)} + IVA ${eur(ivaDe(j))})</span> · 🧾 Fatura`:''} ${j.pagamento?'· '+esc(j.pagamento):''}</div>`:''}
-    ${j.estado==='Orçamento dado'&&j.orcamento?`<div class="m">💬 Orçamento: <b style="color:var(--tx)">${eur(j.orcamento)}</b></div>`:''}
+    ${j.estado==='Orçamento dado'&&(j.orcamentos||[]).length?`<div class="m">💬 ${j.orcamentos.length>1?j.orcamentos.length+' orçamentos':'Orçamento'}: ${j.orcamentos.map(o=>`${o.d?esc(o.d)+' ':''}<b style="color:var(--tx)">${eur(o.v)}</b>`).join(' · ')}</div>`:''}
     <div class="acts">${tel}${map}${concl}</div></div>`;
 }
 function agenda(){
@@ -279,10 +283,13 @@ function concluir(id){ const j = JOBS.find(x=>x.id===id); formulario(Object.assi
 function blocoValor(j, comNif){
   const opt = (arr, v) => arr.map(o=>`<option ${o===v?'selected':''}>${o}</option>`).join('');
   const fat = j.fatura === 'Sim';
-  const v0 = (j.valor===''||j.valor==null) ? (j.orcamento||'') : j.valor;
+  ORCS = (j.orcamentos||[]).map(o=>({d:o.d||'', v:o.v===''||o.v==null?'':String(o.v), a:!!o.a}));
+  const v0 = (j.valor===''||j.valor==null) ? '' : j.valor;
   return `<div id="blocoOrc" style="display:${j.estado==='Orçamento dado'?'block':'none'}">
-    <label>Valor do orçamento (€)</label><input id="f_orcamento" inputmode="decimal" value="${esc(j.orcamento||'')}" placeholder="0,00"></div>
+    <label>Orçamentos dados ao cliente</label><div id="orcLista"></div>
+    <button type="button" class="addorc" onclick="addOrc()">+ Adicionar orçamento</button></div>
   <div id="blocoValor" style="display:${j.estado==='Concluído'?'block':'none'}">
+    <div id="orcAceites"></div>
     <div class="row"><div><label>Valor do trabalho, sem IVA (€)</label><input id="f_valor" inputmode="decimal" value="${esc(v0)}" placeholder="0,00" oninput="contaIva()"></div>
       <div><label>Pagamento</label><select id="f_pagamento"><option value="">—</option>${opt(['Dinheiro','MB Way','Multibanco','Transferência','Por pagar'], j.pagamento)}</select></div></div>
     <label>O cliente quer fatura?</label>
@@ -295,6 +302,29 @@ function blocoValor(j, comNif){
       <label>Nome completo (para a fatura)</label>
       <input id="f_nome" value="${esc(j.nome)}"></div>` : ''}
   </div>`;
+}
+let ORCS = [];
+function addOrc(){ ORCS.push({d:'', v:'', a:false}); renderOrc(); setTimeout(()=>{ const i=document.querySelectorAll('#orcLista .orc input'); if(i.length) i[i.length-2].focus(); },30); }
+function delOrc(i){ ORCS.splice(i,1); renderOrc(); }
+function renderOrc(){
+  const el = $('#orcLista'); if (!el) return;
+  if (!ORCS.length) ORCS.push({d:'', v:'', a:false});
+  el.innerHTML = ORCS.map((o,i)=>`<div class="orc">
+    <input placeholder="Descrição, ex.: Desentupir WC" value="${esc(o.d)}" oninput="ORCS[${i}].d=this.value">
+    <input inputmode="decimal" placeholder="€" value="${esc(o.v)}" oninput="ORCS[${i}].v=this.value">
+    <button type="button" onclick="delOrc(${i})" aria-label="Apagar">✕</button></div>`).join('');
+}
+function renderAceites(){
+  const el = $('#orcAceites'); if (!el) return;
+  const l = ORCS.filter(o=>o.v!=='' && !isNaN(Number(String(o.v).replace(',','.'))));
+  if (!l.length) { el.innerHTML=''; return; }
+  el.innerHTML = `<label>Que orçamentos o cliente aceitou?</label>` + ORCS.map((o,i)=> (o.v==='' ? '' :
+    `<label class="aceite"><input type="checkbox" ${o.a?'checked':''} onchange="ORCS[${i}].a=this.checked;somaAceites()"> ${esc(o.d||'Orçamento '+(i+1))} — <b>${eur(String(o.v).replace(',','.'))}</b></label>`)).join('');
+}
+function somaAceites(){
+  const s = ORCS.filter(o=>o.a).reduce((t,o)=>t+(Number(String(o.v).replace(',','.'))||0),0);
+  if (s) $('#f_valor').value = String(r2(s)).replace('.',',');
+  contaIva();
 }
 function contaIva(){
   const el = $('#ivaInfo'); if (!el) return;
@@ -311,14 +341,15 @@ function mostrarFatura(){
   const s = $('#f_fatura').value === 'Sim'; b.style.display = s ? 'block' : 'none';
   if (s) { verNif(true); setTimeout(()=>$('#f_nif').focus(), 50); }
 }
+function mostrarValorInicial(){ renderOrc(); renderAceites(); if ($('#f_estado').value==='Concluído' && !$('#f_valor').value) { if (ORCS.filter(x=>x.v!=='').length===1) ORCS.forEach(x=>{ if(x.v!=='') x.a=true; }); renderAceites(); somaAceites(); } contaIva(); }
 function mostrarValor(){
   const e = $('#f_estado').value, c = e === 'Concluído', o = e === 'Orçamento dado';
   $('#blocoValor').style.display = c ? 'block' : 'none';
   $('#blocoOrc').style.display = o ? 'block' : 'none';
-  if (c && !$('#f_valor').value && $('#f_orcamento').value) $('#f_valor').value = $('#f_orcamento').value;
+  renderOrc(); renderAceites();
+  if (c && !$('#f_valor').value) { if (ORCS.filter(x=>x.v!=='').length===1) ORCS.forEach(x=>{ if(x.v!=='') x.a=true; }); renderAceites(); somaAceites(); }
   contaIva();
   if (c) setTimeout(()=>$('#f_valor').focus(), 50);
-  if (o) setTimeout(()=>$('#f_orcamento').focus(), 50);
 }
 function formulario(j, focoValor){
   if (PAPEL === 'tecnico') return formTecnico(j, focoValor);
@@ -356,7 +387,7 @@ function formulario(j, focoValor){
     <button class="btn" onclick="guardar('${j.id||''}')">💾 Guardar</button>
     ${j.id ? `<button class="btn sec" onclick="apagar('${j.id}')">Apagar trabalho</button>` : ''}
   </div>`;
-  verNif(true); contaIva();
+  verNif(true); mostrarValorInicial();
   if (focoValor) setTimeout(()=>$('#f_valor').focus(), 50);
 }
 function formTecnico(j, focoValor){
@@ -378,7 +409,7 @@ function formTecnico(j, focoValor){
     <textarea id="f_notas" placeholder="O que foi feito, observações…">${esc(j.notas)}</textarea>
     <button class="btn" onclick="guardar('${j.id}')">💾 Guardar</button>
   </div>`;
-  contaIva();
+  mostrarValorInicial();
   if (focoValor) setTimeout(()=>$('#f_valor').focus(), 50);
 }
 function verNif(inicial){
@@ -404,10 +435,10 @@ async function guardar(id){
   const g = k => { const e = $('#f_'+k); return e ? e.value : undefined; };
   const concl = g('estado') === 'Concluído';
   const d = { id, estado:g('estado'), notas:g('notas') };
-  if (d.estado === 'Orçamento dado'){
-    d.orcamento = (g('orcamento')||'').replace(',', '.').trim();
-    if (d.orcamento && isNaN(Number(d.orcamento))) return toast('Valor do orçamento inválido');
-  }
+  const orcs = ORCS.map(o=>({d:String(o.d||'').trim(), v:String(o.v||'').replace(',', '.').trim(), a:!!o.a})).filter(o=>o.d||o.v);
+  if (orcs.some(o=>o.v==='' || isNaN(Number(o.v)))) return toast('Falta o valor (€) de um orçamento');
+  if (d.estado === 'Orçamento dado' && !orcs.length) return toast('Coloque pelo menos um orçamento');
+  d.orcamentos = orcs.map(o=>({d:o.d, v:Number(o.v), a:o.a}));
   if (concl){ d.valor = g('valor').replace(',', '.').trim(); d.pagamento = g('pagamento'); d.fatura = g('fatura'); }
   if (PAPEL === 'tecnico' && concl && d.fatura === 'Sim'){
     d.nif = g('nif').replace(/\D/g,''); d.nome = g('nome').trim();
