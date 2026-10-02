@@ -11,64 +11,75 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Agenda">
 <style>
-:root{--az:#0b5cab;--az2:#e8f1fb;--tx:#1b2430;--mu:#6b7684;--bd:#dde3ea;--bg:#f4f6f9;--ok:#1f8a4c;--av:#c77700;--er:#c0392b}
-*{box-sizing:border-box}
-body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--tx);font-size:16px}
-header{background:var(--az);color:#fff;padding:14px 16px;position:sticky;top:0;z-index:5;display:flex;justify-content:space-between;align-items:center}
-header h1{font-size:18px;margin:0}
-header button{background:rgba(255,255,255,.15);color:#fff;border:0;border-radius:8px;padding:6px 10px;font-size:13px}
-main{padding:12px 12px 90px;max-width:720px;margin:0 auto}
-nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--bd);display:flex;z-index:5}
-nav button{flex:1;border:0;background:none;padding:10px 4px 14px;font-size:13px;color:var(--mu)}
-nav button b{display:block;font-size:20px}
-nav button.on{color:var(--az);font-weight:600}
-.card{background:#fff;border:1px solid var(--bd);border-radius:12px;padding:12px 14px;margin-bottom:10px}
-.job{cursor:pointer}
-.job .top{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
-.job .h{font-weight:700;font-size:17px}
-.job .n{font-weight:600}
-.job .m{color:var(--mu);font-size:14px;margin-top:3px}
-.tag{font-size:12px;padding:2px 8px;border-radius:99px;font-weight:600;white-space:nowrap}
-.Agendado{background:var(--az2);color:var(--az)} .Concluído{background:#e3f4ea;color:var(--ok)}
-.Cancelado{background:#f6e3e1;color:var(--er)} .Orçamento{background:#efe7fb;color:#6b3fb3}
-.orc{display:flex;gap:6px;margin-top:8px}.orc input:first-child{flex:2}.orc input:nth-child(2){flex:1}
-.orc button,.addorc{border:1px solid var(--bd);background:#fff;border-radius:9px;padding:0 12px;font-size:16px}
-.addorc{width:100%;padding:10px;margin-top:8px;color:var(--az);font-weight:600;font-size:15px}
-.aceite{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--bd);font-size:15px}.aceite input{width:22px;height:22px}
-.ivainfo{font-size:13px;margin-top:6px;padding:8px 10px;background:var(--az2);border-radius:8px;color:var(--tx)} .Em.curso,.Em\ curso{background:#fdf0dc;color:var(--av)}
-.acts{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
-.acts a,.acts button{font-size:14px;padding:7px 12px;border-radius:8px;border:1px solid var(--bd);background:#fff;color:var(--tx);text-decoration:none}
-.acts .p{background:var(--ok);border-color:var(--ok);color:#fff}
-h2{font-size:14px;text-transform:uppercase;letter-spacing:.04em;color:var(--mu);margin:18px 4px 8px}
-label{display:block;font-size:13px;color:var(--mu);margin:10px 0 4px}
-input,select,textarea{width:100%;padding:11px 12px;border:1px solid var(--bd);border-radius:9px;font-size:16px;background:#fff;color:var(--tx);font-family:inherit}
-textarea{min-height:70px}
-.row{display:flex;gap:10px}.row>div{flex:1}
-.btn{width:100%;padding:14px;border:0;border-radius:10px;background:var(--az);color:#fff;font-size:16px;font-weight:600;margin-top:16px}
-.btn.sec{background:#fff;color:var(--er);border:1px solid var(--bd)}
-.hint{font-size:12px;margin-top:4px}.bad{color:var(--er)}.good{color:var(--ok)}
-.kpis{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.kpi .v{font-size:22px;font-weight:700}.kpi .l{font-size:13px;color:var(--mu)}
-table{width:100%;border-collapse:collapse;font-size:14px}
-td,th{padding:7px 4px;border-bottom:1px solid var(--bd);text-align:left}td.r,th.r{text-align:right}
-.vazio{text-align:center;color:var(--mu);padding:30px 10px}
-#login{max-width:340px;margin:60px auto;text-align:center}
-#toast{position:fixed;left:50%;bottom:80px;transform:translateX(-50%);background:#222;color:#fff;padding:10px 16px;border-radius:9px;font-size:14px;display:none;z-index:9}
-.seg{display:flex;gap:6px;margin-bottom:6px}.seg button{flex:1;padding:8px;border:1px solid var(--bd);background:#fff;border-radius:8px;font-size:14px}
-.seg button.on{background:var(--az);color:#fff;border-color:var(--az)}
-#spin{position:fixed;inset:0;background:rgba(244,246,249,.6);display:none;align-items:center;justify-content:center;flex-direction:column;gap:10px;z-index:8;font-size:14px;color:var(--mu)}
-#spin.on{display:flex}
-#splash{position:fixed;inset:0;z-index:20;background:radial-gradient(circle at 50% 40%,#123a86,#08183a 70%);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;transition:opacity .5s}
-#splash img{width:min(72vw,340px);height:auto;animation:pop .6s ease-out}
-#splash div{color:#fff;font-size:20px;font-weight:700;letter-spacing:.02em;opacity:.95}
-#splash.fora{opacity:0;pointer-events:none}
-@keyframes pop{from{transform:scale(.85);opacity:0}to{transform:scale(1);opacity:1}}
-.logo-login{width:150px;height:auto;display:block;margin:-10px auto 6px}
-.notif{background:#fff8e6;border-color:#f3d48a}
-.notif b{display:block;margin-bottom:4px}
-.notif .btn{margin-top:10px;padding:11px;background:var(--av)}
-#spin i{width:34px;height:34px;border:4px solid var(--bd);border-top-color:var(--az);border-radius:50%;animation:rd .8s linear infinite}
-@keyframes rd{to{transform:rotate(360deg)}}
+  :root{--az:#0b5cab;--az2:#e8f1fb;--tx:#1b2430;--mu:#6b7684;--bd:#dde3ea;--bg:#f4f6f9;--ok:#1f8a4c;--av:#c77700;--er:#c0392b}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--tx);font-size:16px}
+  header{background:var(--az);color:#fff;padding:14px 16px;position:sticky;top:0;z-index:5;display:flex;justify-content:space-between;align-items:center}
+  header h1{font-size:18px;margin:0}
+  header button{background:rgba(255,255,255,.15);color:#fff;border:0;border-radius:8px;padding:6px 10px;font-size:13px}
+  main{padding:12px 12px 90px;max-width:720px;margin:0 auto}
+  nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--bd);display:flex;z-index:5}
+  nav button{flex:1;border:0;background:none;padding:10px 4px 14px;font-size:13px;color:var(--mu)}
+  nav button b{display:block;font-size:20px}
+  nav button.on{color:var(--az);font-weight:600}
+  .card{background:#fff;border:1px solid var(--bd);border-radius:12px;padding:12px 14px;margin-bottom:10px}
+  .job{cursor:pointer}
+  .job .top{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+  .job .h{font-weight:700;font-size:17px}
+  .job .n{font-weight:600}
+  .job .m{color:var(--mu);font-size:14px;margin-top:3px}
+  .tag{font-size:12px;padding:2px 8px;border-radius:99px;font-weight:600;white-space:nowrap}
+  .Agendado{background:var(--az2);color:var(--az)} .Concluído{background:#e3f4ea;color:var(--ok)}
+  .Cancelado{background:#f6e3e1;color:var(--er)} .Orçamento{background:#efe7fb;color:#6b3fb3}
+  .orc{display:flex;gap:6px;margin-top:8px}.orc input:first-child{flex:2}.orc input:nth-child(2){flex:1}
+  .orc button,.addorc{border:1px solid var(--bd);background:#fff;border-radius:9px;padding:0 12px;font-size:16px}
+  .addorc{width:100%;padding:10px;margin-top:8px;color:var(--az);font-weight:600;font-size:15px}
+  .aceite{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--bd);font-size:15px}.aceite input{width:22px;height:22px}
+  .fotos{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px}
+  .fotos div{aspect-ratio:1;background:var(--az2);border-radius:8px;overflow:hidden;display:flex;align-items:center;justify-content:center;color:var(--mu);font-size:12px;cursor:pointer}
+  .fotos img{width:100%;height:100%;object-fit:cover}
+  .addfoto{display:block;text-align:center;border:2px dashed var(--bd);border-radius:10px;padding:12px;margin-top:8px;color:var(--az);font-weight:600;cursor:pointer}
+  #modal{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:15;display:none;flex-direction:column;align-items:center;justify-content:center;padding:16px;gap:12px}
+  #modal.on{display:flex}
+  #modal img{max-width:100%;max-height:75vh;border-radius:8px}
+  #modal .caixa{background:#fff;border-radius:12px;padding:16px;width:100%;max-width:360px}
+  #modal .mb{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+  #modal .mb button{padding:10px 16px;border-radius:9px;border:0;font-size:15px}
+  .pagar{background:var(--av)!important;border-color:var(--av)!important;color:#fff!important}
+  .ivainfo{font-size:13px;margin-top:6px;padding:8px 10px;background:var(--az2);border-radius:8px;color:var(--tx)} .Em.curso,.Em\ curso{background:#fdf0dc;color:var(--av)}
+  .acts{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+  .acts a,.acts button{font-size:14px;padding:7px 12px;border-radius:8px;border:1px solid var(--bd);background:#fff;color:var(--tx);text-decoration:none}
+  .acts .p{background:var(--ok);border-color:var(--ok);color:#fff}
+  h2{font-size:14px;text-transform:uppercase;letter-spacing:.04em;color:var(--mu);margin:18px 4px 8px}
+  label{display:block;font-size:13px;color:var(--mu);margin:10px 0 4px}
+  input,select,textarea{width:100%;padding:11px 12px;border:1px solid var(--bd);border-radius:9px;font-size:16px;background:#fff;color:var(--tx);font-family:inherit}
+  textarea{min-height:70px}
+  .row{display:flex;gap:10px}.row>div{flex:1}
+  .btn{width:100%;padding:14px;border:0;border-radius:10px;background:var(--az);color:#fff;font-size:16px;font-weight:600;margin-top:16px}
+  .btn.sec{background:#fff;color:var(--er);border:1px solid var(--bd)}
+  .hint{font-size:12px;margin-top:4px}.bad{color:var(--er)}.good{color:var(--ok)}
+  .kpis{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .kpi .v{font-size:22px;font-weight:700}.kpi .l{font-size:13px;color:var(--mu)}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  td,th{padding:7px 4px;border-bottom:1px solid var(--bd);text-align:left}td.r,th.r{text-align:right}
+  .vazio{text-align:center;color:var(--mu);padding:30px 10px}
+  #login{max-width:340px;margin:60px auto;text-align:center}
+  #toast{position:fixed;left:50%;bottom:80px;transform:translateX(-50%);background:#222;color:#fff;padding:10px 16px;border-radius:9px;font-size:14px;display:none;z-index:9}
+  .seg{display:flex;gap:6px;margin-bottom:6px}.seg button{flex:1;padding:8px;border:1px solid var(--bd);background:#fff;border-radius:8px;font-size:14px}
+  .seg button.on{background:var(--az);color:#fff;border-color:var(--az)}
+  #spin{position:fixed;inset:0;background:rgba(244,246,249,.6);display:none;align-items:center;justify-content:center;flex-direction:column;gap:10px;z-index:8;font-size:14px;color:var(--mu)}
+  #spin.on{display:flex}
+  #splash{position:fixed;inset:0;z-index:20;background:radial-gradient(circle at 50% 40%,#123a86,#08183a 70%);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;transition:opacity .5s}
+  #splash img{width:min(72vw,340px);height:auto;animation:pop .6s ease-out}
+  #splash div{color:#fff;font-size:20px;font-weight:700;letter-spacing:.02em;opacity:.95}
+  #splash.fora{opacity:0;pointer-events:none}
+  @keyframes pop{from{transform:scale(.85);opacity:0}to{transform:scale(1);opacity:1}}
+  .logo-login{width:150px;height:auto;display:block;margin:-10px auto 6px}
+  .notif{background:#fff8e6;border-color:#f3d48a}
+  .notif b{display:block;margin-bottom:4px}
+  .notif .btn{margin-top:10px;padding:11px;background:var(--av)}
+  #spin i{width:34px;height:34px;border:4px solid var(--bd);border-top-color:var(--az);border-radius:50%;animation:rd .8s linear infinite}
+  @keyframes rd{to{transform:rotate(360deg)}}
 </style>
 </head>
 <body>
@@ -76,23 +87,23 @@ td,th{padding:7px 4px;border-bottom:1px solid var(--bd);text-align:left}td.r,th.
 <div id="splash"><img src="logo.webp" alt="Desentupimentos"><div>Agenda de Trabalhos</div></div>
 <main id="app"></main>
 <nav id="nav" style="display:none">
-<button data-t="agenda" class="on" onclick="ir('agenda')"><b>📅</b>Agenda</button>
-<button data-t="novo" onclick="novo()"><b>➕</b>Novo</button>
-<button data-t="valores" onclick="ir('valores')"><b>💶</b>Valores</button>
-<button data-t="financas" onclick="ir('financas')"><b>💰</b>Finanças</button>
+  <button data-t="agenda" class="on" onclick="ir('agenda')"><b>📅</b>Agenda</button>
+  <button data-t="novo" onclick="novo()"><b>➕</b>Novo</button>
+  <button data-t="valores" onclick="ir('valores')"><b>💶</b>Valores</button>
 </nav>
 <div id="toast"></div>
+<div id="modal" onclick="if(event.target===this)fecharModal()"></div>
 <div id="spin"><i></i><span>A carregar…</span></div>
 
 <script src="config.js" onerror="void 0"></script>
 <script>
-let PIN = '', PAPEL = '', NOME = '', TRAB = [], JOBS = [], TAB = 'agenda', FILTRO = 'proximos', PODE_FINANCAS = false;
+let PIN = '', PAPEL = '', NOME = '', TRAB = [], JOBS = [], TAB = 'agenda', FILTRO = 'proximos';
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const eur = v => (Number(v) || 0).toLocaleString('pt-PT', {style:'currency', currency:'EUR'});
 const hoje = () => { const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0,10); };
 const dataPT = s => { if(!s) return ''; const [y,m,d] = s.split('-'); const dt = new Date(y, m-1, d);
-return dt.toLocaleDateString('pt-PT', {weekday:'short', day:'2-digit', month:'short'}); };
+  return dt.toLocaleDateString('pt-PT', {weekday:'short', day:'2-digit', month:'short'}); };
 function toast(t){ const e=$('#toast'); e.textContent=t; e.style.display='block'; clearTimeout(e._t); e._t=setTimeout(()=>e.style.display='none',2500); }
 
 /* Endereço do servidor (Google Apps Script). Pode ficar vazio: a app pede-o no 1.º acesso. */
@@ -102,28 +113,28 @@ const DENTRO_GOOGLE = typeof google !== 'undefined' && google.script && google.s
 
 let _pend = 0, _spinT;
 function spin(on){
-_pend += on ? 1 : -1;
-clearTimeout(_spinT);
-if (_pend > 0) _spinT = setTimeout(()=>$('#spin').classList.add('on'), 250);
-else $('#spin').classList.remove('on');
+  _pend += on ? 1 : -1;
+  clearTimeout(_spinT);
+  if (_pend > 0) _spinT = setTimeout(()=>$('#spin').classList.add('on'), 250);
+  else $('#spin').classList.remove('on');
 }
 function call(acao, dados, silencioso){
-if (!silencioso) spin(true);
-const fim = () => { if (!silencioso) spin(false); };
-if (DENTRO_GOOGLE) return new Promise((ok, ko) => google.script.run
-.withSuccessHandler(r => { fim(); ok(r); })
-.withFailureHandler(e => { fim(); toast(e.message || 'Erro'); ko(e); })
-.api(PIN, acao, dados || {}));
-const ctl = new AbortController(); const tm = setTimeout(()=>ctl.abort(), 30000);
-return fetch(API_URL, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, signal: ctl.signal,
-body: JSON.stringify({ pin: PIN, acao, dados: dados || {} }) })
-.then(r => r.json())
-.then(j => { clearTimeout(tm); fim(); if (!j.ok) { const e = new Error(j.erro); e.servidor = true; throw e; } return j.r; })
-.catch(e => { clearTimeout(tm); fim();
-if (!e.servidor) e.message = e.name === 'AbortError' ? 'O servidor demorou demasiado. Tente de novo.' : 'Sem ligação à internet. Tente de novo.';
-toast(e.message); throw e; });
+  if (!silencioso) spin(true);
+  const fim = () => { if (!silencioso) spin(false); };
+  if (DENTRO_GOOGLE) return new Promise((ok, ko) => google.script.run
+    .withSuccessHandler(r => { fim(); ok(r); })
+    .withFailureHandler(e => { fim(); toast(e.message || 'Erro'); ko(e); })
+    .api(PIN, acao, dados || {}));
+  const ctl = new AbortController(); const tm = setTimeout(()=>ctl.abort(), 30000);
+  return fetch(API_URL, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, signal: ctl.signal,
+      body: JSON.stringify({ pin: PIN, acao, dados: dados || {} }) })
+    .then(r => r.json())
+    .then(j => { clearTimeout(tm); fim(); if (!j.ok) { const e = new Error(j.erro); e.servidor = true; throw e; } return j.r; })
+    .catch(e => { clearTimeout(tm); fim();
+      if (!e.servidor) e.message = e.name === 'AbortError' ? 'O servidor demorou demasiado. Tente de novo.' : 'Sem ligação à internet. Tente de novo.';
+      toast(e.message); throw e; });
 }
-function setJobs(j){ JOBS = j || []; try { localStorage.setItem('cache', JSON.stringify({pin: PIN, papel: PAPEL, nome: NOME, trab: TRAB, jobs: JOBS, financas: PODE_FINANCAS})); } catch(e){} }
+function setJobs(j){ JOBS = j || []; try { localStorage.setItem('cache', JSON.stringify({pin: PIN, papel: PAPEL, nome: NOME, trab: TRAB, jobs: JOBS})); } catch(e){} }
 
 /* ---------- IVA ---------- */
 const IVA_TAXA = 0.23;
@@ -133,11 +144,11 @@ const totalDe = j => r2((Number(j.valor)||0) + ivaDe(j));
 
 /* ---------- NIF português ---------- */
 function nifValido(n){
-n = String(n).replace(/\D/g,'');
-if (!/^[1235689]\d{8}$|^(45|7[0-9])\d{7}$/.test(n)) return false;
-let s = 0; for (let i=0;i<8;i++) s += +n[i] * (9-i);
-let c = 11 - (s % 11); if (c >= 10) c = 0;
-return c === +n[8];
+  n = String(n).replace(/\D/g,'');
+  if (!/^[1235689]\d{8}$|^(45|7[0-9])\d{7}$/.test(n)) return false;
+  let s = 0; for (let i=0;i<8;i++) s += +n[i] * (9-i);
+  let c = 11 - (s % 11); if (c >= 10) c = 0;
+  return c === +n[8];
 }
 
 /* ---------- notificações push ---------- */
@@ -149,132 +160,137 @@ let SW = null;
 if (!DENTRO_GOOGLE && 'serviceWorker' in navigator) SW = navigator.serviceWorker.register('sw.js').catch(() => null);
 function u8(b64){ const p = '='.repeat((4 - b64.length % 4) % 4); const r = atob((b64 + p).replace(/-/g,'+').replace(/_/g,'/')); return Uint8Array.from(r, c => c.charCodeAt(0)); }
 async function guardarCfgSW(){ try { const c = await caches.open('agenda-cfg');
-await c.put(new URL('./__cfg', location.href).href, new Response(JSON.stringify({ api: API_URL, pin: PIN }))); } catch(e){} }
+  await c.put(new URL('./__cfg', location.href).href, new Response(JSON.stringify({ api: API_URL, pin: PIN }))); } catch(e){} }
 async function subAtual(){ try { const reg = await navigator.serviceWorker.ready; return await reg.pushManager.getSubscription(); } catch(e){ return null; } }
 async function estadoNotif(){
-if (!PUSH_OK) return IOS && !INSTALADA ? 'ios-instalar' : 'sem-suporte';
-if (Notification.permission === 'denied') return 'bloqueado';
-return (Notification.permission === 'granted' && await subAtual()) ? 'ativo' : 'desligado';
+  if (!PUSH_OK) return IOS && !INSTALADA ? 'ios-instalar' : 'sem-suporte';
+  if (Notification.permission === 'denied') return 'bloqueado';
+  return (Notification.permission === 'granted' && await subAtual()) ? 'ativo' : 'desligado';
 }
 async function ativarNotif(){
-try {
-const perm = await Notification.requestPermission();
-if (perm !== 'granted') { toast('As notificações ficaram bloqueadas'); return agenda(); }
-const reg = await navigator.serviceWorker.ready;
-const sub = (await reg.pushManager.getSubscription()) || await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: u8(VAPID_PUB) });
-await guardarCfgSW();
-await call('subscrever', { endpoint: sub.endpoint });
-toast('🔔 Notificações ativadas'); agenda();
-} catch(e){ toast('Não foi possível ativar: ' + (e.message || e)); }
+  try {
+    const perm = await Notification.requestPermission();
+    if (perm !== 'granted') { toast('As notificações ficaram bloqueadas'); return agenda(); }
+    const reg = await navigator.serviceWorker.ready;
+    const sub = (await reg.pushManager.getSubscription()) || await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: u8(VAPID_PUB) });
+    await guardarCfgSW();
+    await call('subscrever', { endpoint: sub.endpoint });
+    toast('🔔 Notificações ativadas'); agenda();
+  } catch(e){ toast('Não foi possível ativar: ' + (e.message || e)); }
 }
 async function renovarSub(){ // em cada entrada: mantém o telemóvel registado com o papel certo
-if (!PUSH_OK || Notification.permission !== 'granted') return;
-const sub = await subAtual(); if (!sub) return;
-await guardarCfgSW(); try { await call('subscrever', { endpoint: sub.endpoint }, true); } catch(e){}
+  if (!PUSH_OK || Notification.permission !== 'granted') return;
+  const sub = await subAtual(); if (!sub) return;
+  await guardarCfgSW(); try { await call('subscrever', { endpoint: sub.endpoint }, true); } catch(e){}
 }
 let PEDIDO_INSTALAR = null;
 window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); PEDIDO_INSTALAR = e; if (TAB==='agenda') cartaoNotif(); });
 window.addEventListener('appinstalled', () => { PEDIDO_INSTALAR = null; toast('📲 App instalada'); if (TAB==='agenda') cartaoNotif(); });
 async function instalarApp(){ if (!PEDIDO_INSTALAR) return; PEDIDO_INSTALAR.prompt(); await PEDIDO_INSTALAR.userChoice; PEDIDO_INSTALAR = null; cartaoNotif(); }
 async function cartaoNotif(){
-const el = $('#notifbox'); if (!el) return;
-const e = await estadoNotif();
-const faz = TRAB.includes(NOME);
-const quem = PAPEL === 'tecnico' ? 'quando lhe marcarem ou mudarem um trabalho, e 1 hora antes de cada trabalho'
-: faz ? 'quando lhe marcarem um trabalho, 1 hora antes, e quando alguém concluir um trabalho' : 'quando um trabalho for concluído';
-if (e === 'desligado') el.innerHTML = `<div class="card notif"><b>🔔 Ativar notificações neste telemóvel</b>Recebe um alerta ${quem}.<button class="btn" onclick="ativarNotif()">Ativar notificações</button></div>`;
-else if (e === 'ios-instalar') el.innerHTML = `<div class="card notif"><b>🔔 Para receber notificações no iPhone</b>Toque em <b style="display:inline">Partilhar ⬆️</b> → <b style="display:inline">Adicionar ao ecrã principal</b>. Depois abra a app pelo ícone novo e ative aqui.</div>`;
-else if (e === 'bloqueado') el.innerHTML = `<div class="card notif"><b>🔕 Notificações bloqueadas</b>Nas definições do telemóvel/navegador, permita notificações para esta app.</div>`;
-else el.innerHTML = '';
-if (PEDIDO_INSTALAR && !INSTALADA) el.innerHTML = `<div class="card notif"><b>📲 Instalar a app no telemóvel</b>Fica com ícone próprio, como uma aplicação normal.<button class="btn" style="background:var(--az)" onclick="instalarApp()">Instalar app</button></div>` + el.innerHTML;
+  const el = $('#notifbox'); if (!el) return;
+  const e = await estadoNotif();
+  const faz = TRAB.includes(NOME);
+  const quem = PAPEL === 'tecnico' ? 'quando lhe marcarem ou mudarem um trabalho, e 1 hora antes de cada trabalho'
+    : faz ? 'quando lhe marcarem um trabalho, 1 hora antes, e quando alguém concluir um trabalho' : 'quando um trabalho for concluído';
+  if (e === 'desligado') el.innerHTML = `<div class="card notif"><b>🔔 Ativar notificações neste telemóvel</b>Recebe um alerta ${quem}.<button class="btn" onclick="ativarNotif()">Ativar notificações</button></div>`;
+  else if (e === 'ios-instalar') el.innerHTML = `<div class="card notif"><b>🔔 Para receber notificações no iPhone</b>Toque em <b style="display:inline">Partilhar ⬆️</b> → <b style="display:inline">Adicionar ao ecrã principal</b>. Depois abra a app pelo ícone novo e ative aqui.</div>`;
+  else if (e === 'bloqueado') el.innerHTML = `<div class="card notif"><b>🔕 Notificações bloqueadas</b>Nas definições do telemóvel/navegador, permita notificações para esta app.</div>`;
+  else el.innerHTML = '';
+  if (PEDIDO_INSTALAR && !INSTALADA) el.innerHTML = `<div class="card notif"><b>📲 Instalar a app no telemóvel</b>Fica com ícone próprio, como uma aplicação normal.<button class="btn" style="background:var(--az)" onclick="instalarApp()">Instalar app</button></div>` + el.innerHTML;
 }
 
 /* ---------- login ---------- */
 function ecraLogin(msg){
-$('#nav').style.display='none'; $('#sair').style.display='none';
-$('#app').innerHTML = `<div id="login" class="card">
-${DENTRO_GOOGLE ? '' : '<img class="logo-login" src="logo.webp" alt="">'}
-<h2 style="margin-top:0">Entrar</h2>
-${!DENTRO_GOOGLE && !API_URL ? `<input id="api" placeholder="Endereço do servidor (https://script.google.com/...)" style="margin-bottom:10px">` : ''}
-<input id="pin" type="password" inputmode="numeric" placeholder="PIN" autofocus>
-${msg?`<div class="hint bad">${esc(msg)}</div>`:''}
-<button class="btn" onclick="entrar($('#pin').value)">Entrar</button></div>`;
-$('#pin').addEventListener('keydown', e => { if(e.key==='Enter') entrar(e.target.value); });
+  $('#nav').style.display='none'; $('#sair').style.display='none';
+  $('#app').innerHTML = `<div id="login" class="card">
+    ${DENTRO_GOOGLE ? '' : '<img class="logo-login" src="logo.webp" alt="">'}
+    <h2 style="margin-top:0">Entrar</h2>
+    ${!DENTRO_GOOGLE && !API_URL ? `<input id="api" placeholder="Endereço do servidor (https://script.google.com/...)" style="margin-bottom:10px">` : ''}
+    <input id="pin" type="password" inputmode="numeric" placeholder="PIN" autofocus>
+    ${msg?`<div class="hint bad">${esc(msg)}</div>`:''}
+    <button class="btn" onclick="entrar($('#pin').value)">Entrar</button></div>`;
+  $('#pin').addEventListener('keydown', e => { if(e.key==='Enter') entrar(e.target.value); });
 }
 function mostrarApp(){
-$('#quem').textContent = NOME ? ' · ' + NOME : '';
-$('#nav').style.display='flex'; $('#sair').style.display='block';
-document.querySelectorAll('nav button[data-t=novo], nav button[data-t=valores]').forEach(b=>b.style.display = PAPEL==='tecnico' ? 'none' : '');
-const bf = document.querySelector('nav button[data-t=financas]'); if (bf) bf.style.display = PODE_FINANCAS ? '' : 'none';
+  $('#quem').textContent = NOME ? ' · ' + NOME : '';
+  $('#nav').style.display='flex'; $('#sair').style.display='block';
+  document.querySelectorAll('nav button[data-t=novo], nav button[data-t=valores]').forEach(b=>b.style.display = PAPEL==='tecnico' ? 'none' : '');
 }
 async function entrar(p){
-PIN = String(p||'').trim();
-const a = $('#api'); if (a && a.value.trim()) { API_URL = a.value.trim(); try{localStorage.setItem('api', API_URL)}catch(e){} }
-if (!DENTRO_GOOGLE && !API_URL) return ecraLogin('Falta o endereço do servidor');
-let cache = null; try { cache = JSON.parse(localStorage.getItem('cache') || 'null'); } catch(e){}
-const temCache = cache && cache.pin === PIN;
-if (temCache){ PAPEL = cache.papel; NOME = cache.nome || ''; TRAB = cache.trab || []; JOBS = cache.jobs || []; PODE_FINANCAS = !!cache.financas; mostrarApp(); ir('agenda'); } // mostra logo o que já tinha
-try {
-const r = await call('entrar', {}, temCache);
-PAPEL = r.papel; NOME = r.nome || ''; TRAB = r.trabalhadores || []; PODE_FINANCAS = !!r.financas; setJobs(r.jobs);
-try { localStorage.setItem('pin', PIN); } catch(e){}
-renovarSub();
-mostrarApp();
-if (!temCache || TAB==='agenda' || TAB==='valores') ir(TAB==='valores' ? 'valores' : 'agenda');
-} catch(e){
-if (e.servidor){ try{localStorage.removeItem('pin'); localStorage.removeItem('cache')}catch(_){} ecraLogin(e.message); }
-else if (!temCache) ecraLogin(e.message);
-}
+  PIN = String(p||'').trim();
+  const a = $('#api'); if (a && a.value.trim()) { API_URL = a.value.trim(); try{localStorage.setItem('api', API_URL)}catch(e){} }
+  if (!DENTRO_GOOGLE && !API_URL) return ecraLogin('Falta o endereço do servidor');
+  let cache = null; try { cache = JSON.parse(localStorage.getItem('cache') || 'null'); } catch(e){}
+  const temCache = cache && cache.pin === PIN;
+  if (temCache){ PAPEL = cache.papel; NOME = cache.nome || ''; TRAB = cache.trab || []; JOBS = cache.jobs || []; mostrarApp(); ir('agenda'); }  // mostra logo o que já tinha
+  try {
+    const r = await call('entrar', {}, temCache);
+    PAPEL = r.papel; NOME = r.nome || ''; TRAB = r.trabalhadores || []; setJobs(r.jobs);
+    try { localStorage.setItem('pin', PIN); } catch(e){}
+    renovarSub();
+    mostrarApp();
+    if (!temCache || TAB==='agenda' || TAB==='valores') ir(TAB==='valores' ? 'valores' : 'agenda');
+  } catch(e){
+    if (e.servidor){ try{localStorage.removeItem('pin'); localStorage.removeItem('cache')}catch(_){} ecraLogin(e.message); }
+    else if (!temCache) ecraLogin(e.message);
+  }
 }
 function sair(){ try{localStorage.removeItem('pin'); localStorage.removeItem('cache')}catch(e){} PIN=''; NOME=''; $('#quem').textContent=''; ecraLogin(); }
 
 /* ---------- navegação ---------- */
 function ir(t){ TAB=t; document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on', b.dataset.t===t));
-if(t==='agenda') agenda(); else if(t==='valores') valores(); else if(t==='financas') financas(); window.scrollTo(0,0); }
+  if(t==='agenda') agenda(); else if(t==='valores') valores(); window.scrollTo(0,0); }
 
 /* ---------- agenda ---------- */
 function cartao(j){
-const tel = j.telefone ? `<a href="tel:${esc(j.telefone.replace(/\s/g,''))}" onclick="event.stopPropagation()">📞 Ligar</a>` : '';
-const map = j.morada ? `<a target="_blank" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(j.morada)}" onclick="event.stopPropagation()">📍 Mapa</a>` : '';
-const concl = j.estado!=='Concluído' && j.estado!=='Cancelado' ? `<button class="p" onclick="event.stopPropagation();concluir('${j.id}')">✅ Concluir</button>` : '';
-return `<div class="card job" onclick="editar('${j.id}')">
-<div class="top"><span class="h">${esc(j.hora)} · ${esc(dataPT(j.data))}</span><span class="tag ${esc(j.estado)}">${esc(j.estado)}</span></div>
-<div class="n">${esc(j.nome)}</div>
-<div class="m">${esc(j.servico||'')}${j.tecnico?' · 👷 '+esc(j.tecnico):''}</div>
-${j.morada?`<div class="m">${esc(j.morada)}</div>`:''}
-${j.estado==='Concluído'&&j.valor!==''&&j.valor!=null?`<div class="m"><b style="color:var(--tx)">${eur(totalDe(j))}</b>${j.fatura==='Sim'?` <span style="font-size:12px">(${eur(j.valor)} + IVA ${eur(ivaDe(j))})</span> · 🧾 Fatura`:''} ${j.pagamento?'· '+esc(j.pagamento):''}</div>`:''}
-${j.estado==='Orçamento dado'&&(j.orcamentos||[]).length?`<div class="m">💬 ${j.orcamentos.length>1?j.orcamentos.length+' orçamentos':'Orçamento'}: ${j.orcamentos.map(o=>`${o.d?esc(o.d)+' ':''}<b style="color:var(--tx)">${eur(o.v)}</b>`).join(' · ')}</div>`:''}
-<div class="acts">${tel}${map}${concl}</div></div>`;
+  const tel = j.telefone ? `<a href="tel:${esc(j.telefone.replace(/\s/g,''))}" onclick="event.stopPropagation()">📞 Ligar</a>` : '';
+  const map = j.morada ? `<a target="_blank" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(j.morada)}" onclick="event.stopPropagation()">📍 Mapa</a>` : '';
+  const concl = j.estado!=='Concluído' && j.estado!=='Cancelado' ? `<button class="p" onclick="event.stopPropagation();concluir('${j.id}')">✅ Concluir</button>` : '';
+  const porPagar = j.estado==='Concluído' && j.pagamento==='Por pagar';
+  const pagoBtn = porPagar && PAPEL==='admin' ? `<button class="pagar" onclick="event.stopPropagation();marcarPago('${j.id}')">💶 Marcar como pago</button>` : '';
+  return `<div class="card job" onclick="editar('${j.id}')">
+    <div class="top"><span class="h">${esc(j.hora)} · ${esc(dataPT(j.data))}</span><span class="tag ${esc(j.estado)}">${esc(j.estado)}</span></div>
+    <div class="n">${esc(j.nome)}</div>
+    <div class="m">${esc(j.servico||'')}${j.tecnico?' · 👷 '+esc(j.tecnico):''}</div>
+    ${j.morada?`<div class="m">${esc(j.morada)}</div>`:''}
+    ${j.estado==='Concluído'&&j.valor!==''&&j.valor!=null?`<div class="m"><b style="color:var(--tx)">${eur(totalDe(j))}</b>${j.fatura==='Sim'?` <span style="font-size:12px">(${eur(j.valor)} + IVA ${eur(ivaDe(j))})</span> · 🧾 Fatura`:''} ${j.pagamento&&j.pagamento!=='Por pagar'?'· '+esc(j.pagamento):''}</div>`:''}
+    ${j.estado==='Orçamento dado'&&(j.orcamentos||[]).length?`<div class="m">💬 ${j.orcamentos.length>1?j.orcamentos.length+' orçamentos':'Orçamento'}: ${j.orcamentos.map(o=>`${o.d?esc(o.d)+' ':''}<b style="color:var(--tx)">${eur(o.v)}</b>`).join(' · ')}</div>`:''}
+    ${porPagar?`<div class="m" style="color:var(--av);font-weight:600">⏳ Por pagar — o cliente paga depois</div>`:''}
+    ${(j.fotos||[]).length?`<div class="m">📷 ${j.fotos.length} foto${j.fotos.length>1?'s':''}</div>`:''}
+    <div class="acts">${tel}${map}${concl}${pagoBtn}</div></div>`;
 }
 function agenda(){
-$('#app').innerHTML = `<div id="notifbox"></div><input placeholder="🔍 Procurar cliente, NIF, morada…" value="${esc(window._q||'')}" oninput="window._q=this.value;lista()" id="q">
-<div class="seg" style="margin-top:10px">
-<button class="${FILTRO==='proximos'?'on':''}" onclick="FILTRO='proximos';agenda()">Próximos</button>
-<button class="${FILTRO==='orcamentos'?'on':''}" onclick="FILTRO='orcamentos';agenda()">Orçamentos</button>
-<button class="${FILTRO==='anteriores'?'on':''}" onclick="FILTRO='anteriores';agenda()">Anteriores</button></div>
-<div id="lista"></div>`;
-lista(); cartaoNotif();
+  $('#app').innerHTML = `<div id="notifbox"></div><input placeholder="🔍 Procurar cliente, NIF, morada…" value="${esc(window._q||'')}" oninput="window._q=this.value;lista()" id="q">
+    <div class="seg" style="margin-top:10px">
+      <button class="${FILTRO==='proximos'?'on':''}" onclick="FILTRO='proximos';agenda()">Próximos</button>
+      <button class="${FILTRO==='orcamentos'?'on':''}" onclick="FILTRO='orcamentos';agenda()">Orçamentos</button>
+      <button class="${FILTRO==='anteriores'?'on':''}" onclick="FILTRO='anteriores';agenda()">Anteriores</button></div>
+    <div id="lista"></div>`;
+  lista(); cartaoNotif();
 }
 function lista(){
-const h = hoje(); const q = (window._q||'').toLowerCase();
-const l = JOBS.filter(j => !q || [j.nome,j.nif,j.morada,j.servico,j.telefone].join(' ').toLowerCase().includes(q));
-const ord = (a,b) => (a.data+a.hora).localeCompare(b.data+b.hora);
-let html = '';
-if (FILTRO==='proximos'){
-const hj = l.filter(j=>j.data===h).sort(ord);
-const fut = l.filter(j=>j.data>h).sort(ord);
-const atras = l.filter(j=>j.data<h && j.estado==='Agendado').sort(ord);
-if(atras.length) html += `<h2 style="color:var(--er)">Por concluir (atrasados)</h2>` + atras.map(cartao).join('');
-html += `<h2>Hoje</h2>` + (hj.length ? hj.map(cartao).join('') : `<div class="card vazio">Nada agendado para hoje</div>`);
-html += `<h2>Próximos</h2>` + (fut.length ? fut.map(cartao).join('') : `<div class="card vazio">Sem trabalhos futuros</div>`);
-} else if (FILTRO==='orcamentos'){
-const orc = l.filter(j=>j.estado==='Orçamento dado').sort(ord).reverse();
-html += `<h2>Orçamentos dados</h2>` + (orc.length ? orc.map(cartao).join('') : `<div class="card vazio">Sem orçamentos guardados</div>`);
-} else {
-const ant = l.filter(j=>j.data<h).sort(ord).reverse();
-html += `<h2>Anteriores</h2>` + (ant.length ? ant.map(cartao).join('') : `<div class="card vazio">Sem trabalhos anteriores</div>`);
-}
-$('#lista').innerHTML = html;
+  const h = hoje(); const q = (window._q||'').toLowerCase();
+  const l = JOBS.filter(j => !q || [j.nome,j.nif,j.morada,j.servico,j.telefone].join(' ').toLowerCase().includes(q));
+  const ord = (a,b) => (a.data+a.hora).localeCompare(b.data+b.hora);
+  let html = '';
+  if (FILTRO==='proximos'){
+    const hj = l.filter(j=>j.data===h).sort(ord);
+    const fut = l.filter(j=>j.data>h).sort(ord);
+    const atras = l.filter(j=>j.data<h && j.estado==='Agendado').sort(ord);
+    const receber = PAPEL==='admin' ? l.filter(j=>j.estado==='Concluído' && j.pagamento==='Por pagar').sort(ord) : [];
+    if(receber.length) html += `<h2 style="color:var(--av)">💶 Por receber (${receber.length}) · ${eur(receber.reduce((t,j)=>t+totalDe(j),0))}</h2>` + receber.map(cartao).join('');
+    if(atras.length) html += `<h2 style="color:var(--er)">Por concluir (atrasados)</h2>` + atras.map(cartao).join('');
+    html += `<h2>Hoje</h2>` + (hj.length ? hj.map(cartao).join('') : `<div class="card vazio">Nada agendado para hoje</div>`);
+    html += `<h2>Próximos</h2>` + (fut.length ? fut.map(cartao).join('') : `<div class="card vazio">Sem trabalhos futuros</div>`);
+  } else if (FILTRO==='orcamentos'){
+    const orc = l.filter(j=>j.estado==='Orçamento dado').sort(ord).reverse();
+    html += `<h2>Orçamentos dados</h2>` + (orc.length ? orc.map(cartao).join('') : `<div class="card vazio">Sem orçamentos guardados</div>`);
+  } else {
+    const ant = l.filter(j=>j.data<h).sort(ord).reverse();
+    html += `<h2>Anteriores</h2>` + (ant.length ? ant.map(cartao).join('') : `<div class="card vazio">Sem trabalhos anteriores</div>`);
+  }
+  $('#lista').innerHTML = html;
 }
 
 /* ---------- formulário ---------- */
@@ -283,419 +299,298 @@ function editar(id){ formulario(JOBS.find(j=>j.id===id)); }
 function concluir(id){ const j = JOBS.find(x=>x.id===id); formulario(Object.assign({}, j, {estado:'Concluído'}), true); }
 
 function blocoValor(j, comNif){
-const opt = (arr, v) => arr.map(o=>`<option ${o===v?'selected':''}>${o}</option>`).join('');
-const fat = j.fatura === 'Sim';
-ORCS = (j.orcamentos||[]).map(o=>({d:o.d||'', v:o.v===''||o.v==null?'':String(o.v), a:!!o.a}));
-const v0 = (j.valor===''||j.valor==null) ? '' : j.valor;
-return `<div id="blocoOrc" style="display:${j.estado==='Orçamento dado'?'block':'none'}">
-<label>Orçamentos dados ao cliente</label><div id="orcLista"></div>
-<button type="button" class="addorc" onclick="addOrc()">+ Adicionar orçamento</button></div>
-<div id="blocoValor" style="display:${j.estado==='Concluído'?'block':'none'}">
-<div id="orcAceites"></div>
-<div class="row"><div><label>Valor do trabalho, sem IVA (€)</label><input id="f_valor" inputmode="decimal" value="${esc(v0)}" placeholder="0,00" oninput="contaIva()"></div>
-<div><label>Pagamento</label><select id="f_pagamento"><option value="">—</option>${opt(['Dinheiro','MB Way – Alex (925 375 475)','MB Way – Mariana (910 451 649)','Multibanco','Transferência','Por pagar'], j.pagamento)}</select></div></div>
-<label>O cliente quer fatura?</label>
-<select id="f_fatura" onchange="mostrarFatura()">${opt(['Não','Sim'], fat?'Sim':'Não')}</select>
-<div id="ivaInfo" class="ivainfo"></div>
-${comNif ? `<div id="blocoFatura" style="display:${fat?'block':'none'}">
-<label>Contribuinte (NIF)</label>
-<input id="f_nif" inputmode="numeric" maxlength="9" value="${esc(j.nif)}" placeholder="9 dígitos" oninput="verNif()">
-<div id="nifmsg" class="hint"></div>
-<label>Nome completo (para a fatura)</label>
-<input id="f_nome" value="${esc(j.nome)}"></div>` : ''}
-</div>`;
+  const opt = (arr, v) => arr.map(o=>`<option ${o===v?'selected':''}>${o}</option>`).join('');
+  const fat = j.fatura === 'Sim';
+  ORCS = (j.orcamentos||[]).map(o=>({d:o.d||'', v:o.v===''||o.v==null?'':String(o.v), a:!!o.a}));
+  const v0 = (j.valor===''||j.valor==null) ? '' : j.valor;
+  return `<div id="blocoOrc" style="display:${j.estado==='Orçamento dado'?'block':'none'}">
+    <label>Orçamentos dados ao cliente</label><div id="orcLista"></div>
+    <button type="button" class="addorc" onclick="addOrc()">+ Adicionar orçamento</button></div>
+  <div id="blocoValor" style="display:${j.estado==='Concluído'?'block':'none'}">
+    <div id="orcAceites"></div>
+    <div class="row"><div><label>Valor do trabalho, sem IVA (€)</label><input id="f_valor" inputmode="decimal" value="${esc(v0)}" placeholder="0,00" oninput="contaIva()"></div>
+      <div><label>Pagamento</label>${selPagamento(j)}</div></div>
+    <label>O cliente quer fatura?</label>
+    <select id="f_fatura" onchange="mostrarFatura()">${opt(['Não','Sim'], fat?'Sim':'Não')}</select>
+    <div id="ivaInfo" class="ivainfo"></div>
+    ${comNif ? `<div id="blocoFatura" style="display:${fat?'block':'none'}">
+      <label>Contribuinte (NIF)</label>
+      <input id="f_nif" inputmode="numeric" maxlength="9" value="${esc(j.nif)}" placeholder="9 dígitos" oninput="verNif()">
+      <div id="nifmsg" class="hint"></div>
+      <label>Nome completo (para a fatura)</label>
+      <input id="f_nome" value="${esc(j.nome)}"></div>` : ''}
+  </div>`;
+}
+const PAGAMENTOS = ['Dinheiro','MB Way','Multibanco','Transferência'];
+function selPagamento(j){
+  if (PAPEL==='tecnico' && j.pagamento==='Por pagar' && (JOBS.find(x=>x.id===j.id)||{}).estado==='Concluído')
+    return `<input type="hidden" id="f_pagamento" value="Por pagar"><div class="hint" style="color:var(--av);font-size:14px;padding-top:8px">⏳ Por pagar — a Mariana ou o Alex marcam quando o cliente pagar</div>`;
+  return `<select id="f_pagamento"><option value="">—</option>${PAGAMENTOS.map(p=>`<option ${p===j.pagamento?'selected':''}>${p}</option>`).join('')}
+    <option value="Por pagar" ${j.pagamento==='Por pagar'?'selected':''}>⏳ Ainda não pagou (paga depois)</option></select>`;
+}
+/* ---------- marcar como pago (Mariana / Alex) ---------- */
+function fecharModal(){ const m=$('#modal'); m.classList.remove('on'); m.innerHTML=''; }
+function marcarPago(id){
+  const j = JOBS.find(x=>x.id===id); if (!j) return;
+  $('#modal').innerHTML = `<div class="caixa"><h2 style="margin-top:0">💶 Cliente pagou</h2>
+    <div style="margin-bottom:10px"><b>${esc(j.nome)}</b> — ${eur(totalDe(j))}</div>
+    <div class="mb">${PAGAMENTOS.map(p=>`<button style="background:var(--az);color:#fff" onclick="confirmarPago('${id}','${p}')">${p}</button>`).join('')}</div>
+    <button class="btn sec" style="color:var(--mu)" onclick="fecharModal()">Cancelar</button></div>`;
+  $('#modal').classList.add('on');
+}
+async function confirmarPago(id, forma){
+  fecharModal();
+  const j = JOBS.find(x=>x.id===id);
+  setJobs(await call('guardar', { id, estado: j.estado, pagamento: forma }));
+  toast('✓ Marcado como pago (' + forma + ')'); if (TAB==='valores') valores(); else ir('agenda');
+}
+/* ---------- fotos ---------- */
+const FOTO_CACHE = {};
+function reduzir(file, max, q){ return new Promise((ok, ko) => { const img = new Image();
+  img.onload = () => { const s = Math.min(1, max / Math.max(img.width, img.height)); const c = document.createElement('canvas');
+    c.width = Math.round(img.width*s); c.height = Math.round(img.height*s); c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+    URL.revokeObjectURL(img.src); ok(c.toDataURL('image/jpeg', q).split(',')[1]); };
+  img.onerror = () => ko(new Error('Não consegui ler a foto')); img.src = URL.createObjectURL(file); }); }
+function blocoFotos(j){
+  if (!j.id) return `<h2>📷 Fotos</h2><div class="hint">Guarde o trabalho primeiro para poder juntar fotos.</div>`;
+  return `<h2>📷 Fotos do trabalho</h2><div id="fotosBox" class="fotos"></div>
+    <label class="addfoto">➕ Tirar / juntar fotos<input type="file" accept="image/*" multiple style="display:none" onchange="addFotos('${j.id}', this)"></label>`;
+}
+function renderFotos(id){
+  const box = $('#fotosBox'); if (!box) return;
+  const j = JOBS.find(x=>x.id===id); const fs = (j && j.fotos) || [];
+  box.innerHTML = fs.length ? fs.map(f=>`<div id="ft_${f.t}" onclick="verFoto('${id}','${f.id}')">${FOTO_CACHE[f.t]?`<img src="${FOTO_CACHE[f.t]}">`:'…'}</div>`).join('') : '<div style="grid-column:1/-1;aspect-ratio:auto;padding:12px">Ainda sem fotos</div>';
+  fs.forEach(async f => { if (FOTO_CACHE[f.t]) return;
+    try { FOTO_CACHE[f.t] = 'data:image/jpeg;base64,' + await call('verfoto', { id, foto: f.t }, true);
+      const el = document.getElementById('ft_'+f.t); if (el) el.innerHTML = `<img src="${FOTO_CACHE[f.t]}">`; } catch(e){} });
+}
+async function addFotos(id, input){
+  const files = [...input.files]; input.value = '';
+  for (let i = 0; i < files.length; i++){
+    try {
+      toast(`A enviar foto ${i+1} de ${files.length}…`);
+      const foto = await reduzir(files[i], 1600, 0.8), mini = await reduzir(files[i], 360, 0.7);
+      setJobs(await call('foto', { id, foto, mini }));
+      renderFotos(id);
+    } catch(e){ toast('Erro na foto: ' + (e.message||e)); }
+  }
+  toast('📷 Fotos guardadas'); 
+}
+async function verFoto(id, fid){
+  const j = JOBS.find(x=>x.id===id); const f = (j.fotos||[]).find(x=>x.id===fid); if (!f) return;
+  const podeApagar = PAPEL==='admin' || f.por===NOME;
+  $('#modal').innerHTML = `<div style="color:#fff">A carregar…</div>`; $('#modal').classList.add('on');
+  try {
+    const src = FOTO_CACHE[fid] || (FOTO_CACHE[fid] = 'data:image/jpeg;base64,' + await call('verfoto', { id, foto: fid }, true));
+    $('#modal').innerHTML = `<img src="${src}"><div style="color:#ddd;font-size:13px">📷 ${esc(f.por||'')} · ${esc(f.em||'')}</div>
+      <div class="mb"><button style="background:#fff" onclick="fecharModal()">Fechar</button>
+      ${podeApagar?`<button style="background:var(--er);color:#fff" onclick="apagarFoto('${id}','${fid}')">Apagar foto</button>`:''}</div>`;
+  } catch(e){ fecharModal(); }
+}
+async function apagarFoto(id, fid){
+  fecharModal(); setJobs(await call('apagarfoto', { id, foto: fid })); renderFotos(id); toast('Foto apagada');
 }
 let ORCS = [];
 function addOrc(){ ORCS.push({d:'', v:'', a:false}); renderOrc(); setTimeout(()=>{ const i=document.querySelectorAll('#orcLista .orc input'); if(i.length) i[i.length-2].focus(); },30); }
 function delOrc(i){ ORCS.splice(i,1); renderOrc(); }
 function renderOrc(){
-const el = $('#orcLista'); if (!el) return;
-if (!ORCS.length) ORCS.push({d:'', v:'', a:false});
-el.innerHTML = ORCS.map((o,i)=>`<div class="orc">
-<input placeholder="Descrição, ex.: Desentupir WC" value="${esc(o.d)}" oninput="ORCS[${i}].d=this.value">
-<input inputmode="decimal" placeholder="€" value="${esc(o.v)}" oninput="ORCS[${i}].v=this.value">
-<button type="button" onclick="delOrc(${i})" aria-label="Apagar">✕</button></div>`).join('');
+  const el = $('#orcLista'); if (!el) return;
+  if (!ORCS.length) ORCS.push({d:'', v:'', a:false});
+  el.innerHTML = ORCS.map((o,i)=>`<div class="orc">
+    <input placeholder="Descrição, ex.: Desentupir WC" value="${esc(o.d)}" oninput="ORCS[${i}].d=this.value">
+    <input inputmode="decimal" placeholder="€" value="${esc(o.v)}" oninput="ORCS[${i}].v=this.value">
+    <button type="button" onclick="delOrc(${i})" aria-label="Apagar">✕</button></div>`).join('');
 }
 function renderAceites(){
-const el = $('#orcAceites'); if (!el) return;
-const l = ORCS.filter(o=>o.v!=='' && !isNaN(Number(String(o.v).replace(',','.'))));
-if (!l.length) { el.innerHTML=''; return; }
-el.innerHTML = `<label>Que orçamentos o cliente aceitou?</label>` + ORCS.map((o,i)=> (o.v==='' ? '' :
-`<label class="aceite"><input type="checkbox" ${o.a?'checked':''} onchange="ORCS[${i}].a=this.checked;somaAceites()"> ${esc(o.d||'Orçamento '+(i+1))} — <b>${eur(String(o.v).replace(',','.'))}</b></label>`)).join('');
+  const el = $('#orcAceites'); if (!el) return;
+  const l = ORCS.filter(o=>o.v!=='' && !isNaN(Number(String(o.v).replace(',','.'))));
+  if (!l.length) { el.innerHTML=''; return; }
+  el.innerHTML = `<label>Que orçamentos o cliente aceitou?</label>` + ORCS.map((o,i)=> (o.v==='' ? '' :
+    `<label class="aceite"><input type="checkbox" ${o.a?'checked':''} onchange="ORCS[${i}].a=this.checked;somaAceites()"> ${esc(o.d||'Orçamento '+(i+1))} — <b>${eur(String(o.v).replace(',','.'))}</b></label>`)).join('');
 }
 function somaAceites(){
-const s = ORCS.filter(o=>o.a).reduce((t,o)=>t+(Number(String(o.v).replace(',','.'))||0),0);
-if (s) $('#f_valor').value = String(r2(s)).replace('.',',');
-contaIva();
+  const s = ORCS.filter(o=>o.a).reduce((t,o)=>t+(Number(String(o.v).replace(',','.'))||0),0);
+  if (s) $('#f_valor').value = String(r2(s)).replace('.',',');
+  contaIva();
 }
 function contaIva(){
-const el = $('#ivaInfo'); if (!el) return;
-const v = Number(($('#f_valor').value||'').replace(',', '.'));
-if (!v) { el.textContent = 'Coloque o valor do trabalho.'; return; }
-if ($('#f_fatura').value === 'Sim') {
-const iva = r2(v*IVA_TAXA);
-el.innerHTML = `${eur(v)} + IVA 23% <b>${eur(iva)}</b> = <b>Cliente paga ${eur(v+iva)}</b><br><span style="font-size:12px;color:var(--mu)">Os ${eur(iva)} de IVA são para entregar ao Estado.</span>`;
-} else el.innerHTML = `<b>Cliente paga ${eur(v)}</b> (sem fatura, sem IVA)`;
+  const el = $('#ivaInfo'); if (!el) return;
+  const v = Number(($('#f_valor').value||'').replace(',', '.'));
+  if (!v) { el.textContent = 'Coloque o valor do trabalho.'; return; }
+  if ($('#f_fatura').value === 'Sim') {
+    const iva = r2(v*IVA_TAXA);
+    el.innerHTML = `${eur(v)} + IVA 23% <b>${eur(iva)}</b> = <b>Cliente paga ${eur(v+iva)}</b><br><span style="font-size:12px;color:var(--mu)">Os ${eur(iva)} de IVA são para entregar ao Estado.</span>`;
+  } else el.innerHTML = `<b>Cliente paga ${eur(v)}</b> (sem fatura, sem IVA)`;
 }
 function mostrarFatura(){
-contaIva();
-const b = $('#blocoFatura'); if (!b) return;
-const s = $('#f_fatura').value === 'Sim'; b.style.display = s ? 'block' : 'none';
-if (s) { verNif(true); setTimeout(()=>$('#f_nif').focus(), 50); }
+  contaIva();
+  const b = $('#blocoFatura'); if (!b) return;
+  const s = $('#f_fatura').value === 'Sim'; b.style.display = s ? 'block' : 'none';
+  if (s) { verNif(true); setTimeout(()=>$('#f_nif').focus(), 50); }
 }
 function mostrarValorInicial(){ renderOrc(); renderAceites(); if ($('#f_estado').value==='Concluído' && !$('#f_valor').value) { if (ORCS.filter(x=>x.v!=='').length===1) ORCS.forEach(x=>{ if(x.v!=='') x.a=true; }); renderAceites(); somaAceites(); } contaIva(); }
 function mostrarValor(){
-const e = $('#f_estado').value, c = e === 'Concluído', o = e === 'Orçamento dado';
-$('#blocoValor').style.display = c ? 'block' : 'none';
-$('#blocoOrc').style.display = o ? 'block' : 'none';
-renderOrc(); renderAceites();
-if (c && !$('#f_valor').value) { if (ORCS.filter(x=>x.v!=='').length===1) ORCS.forEach(x=>{ if(x.v!=='') x.a=true; }); renderAceites(); somaAceites(); }
-contaIva();
-if (c) setTimeout(()=>$('#f_valor').focus(), 50);
+  const e = $('#f_estado').value, c = e === 'Concluído', o = e === 'Orçamento dado';
+  $('#blocoValor').style.display = c ? 'block' : 'none';
+  $('#blocoOrc').style.display = o ? 'block' : 'none';
+  renderOrc(); renderAceites();
+  if (c && !$('#f_valor').value) { if (ORCS.filter(x=>x.v!=='').length===1) ORCS.forEach(x=>{ if(x.v!=='') x.a=true; }); renderAceites(); somaAceites(); }
+  contaIva();
+  if (c) setTimeout(()=>$('#f_valor').focus(), 50);
 }
 function formulario(j, focoValor){
-if (PAPEL === 'tecnico') return formTecnico(j, focoValor);
-TAB='novo'; document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on', b.dataset.t==='novo' && !j.id));
-const clientes = [...new Map(JOBS.filter(x=>x.nome).map(x=>[x.nome, x])).keys()];
-const opt = (arr, v) => arr.map(o=>`<option ${o===v?'selected':''}>${o}</option>`).join('');
-$('#app').innerHTML = `<div class="card">
-<h2 style="margin-top:4px">${j.id?'Editar trabalho':'Novo trabalho'}</h2>
-<div class="row"><div><label>Data</label><input id="f_data" type="date" value="${esc(j.data)}"></div>
-<div><label>Hora</label><input id="f_hora" type="time" value="${esc(j.hora)}"></div></div>
-<div class="row"><div><label>Duração</label><select id="f_duracao">${[30,60,90,120,180,240].map(m=>`<option value="${m}" ${String(m)===String(j.duracao||60)?'selected':''}>${m<60?m+' min':(m/60)+' h'}</option>`).join('')}</select></div>
-<div><label>Técnico</label><select id="f_tecnico"><option value="">— Qualquer um —</option>${[...new Set(TRAB.concat(j.tecnico?[j.tecnico]:[]))].map(n=>`<option ${n===j.tecnico?'selected':''}>${esc(n)}</option>`).join('')}</select></div></div>
+  if (PAPEL === 'tecnico') return formTecnico(j, focoValor);
+  TAB='novo'; document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on', b.dataset.t==='novo' && !j.id));
+  const clientes = [...new Map(JOBS.filter(x=>x.nome).map(x=>[x.nome, x])).keys()];
+  const opt = (arr, v) => arr.map(o=>`<option ${o===v?'selected':''}>${o}</option>`).join('');
+  $('#app').innerHTML = `<div class="card">
+    <h2 style="margin-top:4px">${j.id?'Editar trabalho':'Novo trabalho'}</h2>
+    <div class="row"><div><label>Data</label><input id="f_data" type="date" value="${esc(j.data)}"></div>
+      <div><label>Hora</label><input id="f_hora" type="time" value="${esc(j.hora)}"></div></div>
+    <div class="row"><div><label>Duração</label><select id="f_duracao">${[30,60,90,120,180,240].map(m=>`<option value="${m}" ${String(m)===String(j.duracao||60)?'selected':''}>${m<60?m+' min':(m/60)+' h'}</option>`).join('')}</select></div>
+      <div><label>Técnico</label><select id="f_tecnico"><option value="">— Qualquer um —</option>${[...new Set(TRAB.concat(j.tecnico?[j.tecnico]:[]))].map(n=>`<option ${n===j.tecnico?'selected':''}>${esc(n)}</option>`).join('')}</select></div></div>
 
-<h2>Cliente</h2>
-<label>Contribuinte (NIF) <span style="font-size:12px">— só se quiser fatura</span></label>
-<input id="f_nif" inputmode="numeric" maxlength="9" value="${esc(j.nif)}" placeholder="9 dígitos" oninput="verNif()">
-<div id="nifmsg" class="hint"></div>
-<label>Nome completo</label>
-<input id="f_nome" list="lclientes" value="${esc(j.nome)}" oninput="preencherPorNome()">
-<datalist id="lclientes">${clientes.map(c=>`<option value="${esc(c)}">`).join('')}</datalist>
-<label>Morada</label>
-<textarea id="f_morada" placeholder="Rua, nº, código postal, localidade">${esc(j.morada)}</textarea>
-<label>Telefone</label>
-<input id="f_telefone" type="tel" value="${esc(j.telefone)}">
+    <h2>Cliente</h2>
+    <label>Contribuinte (NIF) <span style="font-size:12px">— só se quiser fatura</span></label>
+    <input id="f_nif" inputmode="numeric" maxlength="9" value="${esc(j.nif)}" placeholder="9 dígitos" oninput="verNif()">
+    <div id="nifmsg" class="hint"></div>
+    <label>Nome completo</label>
+    <input id="f_nome" list="lclientes" value="${esc(j.nome)}" oninput="preencherPorNome()">
+    <datalist id="lclientes">${clientes.map(c=>`<option value="${esc(c)}">`).join('')}</datalist>
+    <label>Morada</label>
+    <textarea id="f_morada" placeholder="Rua, nº, código postal, localidade">${esc(j.morada)}</textarea>
+    <label>Telefone</label>
+    <input id="f_telefone" type="tel" value="${esc(j.telefone)}">
 
-<h2>Serviço</h2>
-<label>Tipo de serviço</label>
-<input id="f_servico" list="lserv" value="${esc(j.servico)}" placeholder="Ex.: Desentupimento de esgoto">
-<datalist id="lserv">${['Desentupimento de esgoto','Desentupimento de cozinha','Desentupimento de WC','Limpeza de fossa','Inspeção vídeo','Hidrojato','Reparação de canalização'].map(s=>`<option value="${s}">`).join('')}</datalist>
-<label>Estado</label>
-<select id="f_estado" onchange="mostrarValor()">${opt(['Agendado','Orçamento dado','Em curso','Concluído','Cancelado'], j.estado)}</select>
-${blocoValor(j, false)}
-<label>Notas</label>
-<textarea id="f_notas">${esc(j.notas)}</textarea>
-<button class="btn" onclick="guardar('${j.id||''}')">💾 Guardar</button>
-${j.id ? `<button class="btn sec" onclick="apagar('${j.id}')">Apagar trabalho</button>` : ''}
-</div>`;
-verNif(true); mostrarValorInicial();
-if (focoValor) setTimeout(()=>$('#f_valor').focus(), 50);
+    <h2>Serviço</h2>
+    <label>Tipo de serviço</label>
+    <input id="f_servico" list="lserv" value="${esc(j.servico)}" placeholder="Ex.: Desentupimento de esgoto">
+    <datalist id="lserv">${['Desentupimento de esgoto','Desentupimento de cozinha','Desentupimento de WC','Limpeza de fossa','Inspeção vídeo','Hidrojato','Reparação de canalização'].map(s=>`<option value="${s}">`).join('')}</datalist>
+    <label>Estado</label>
+    <select id="f_estado" onchange="mostrarValor()">${opt(['Agendado','Orçamento dado','Em curso','Concluído','Cancelado'], j.estado)}</select>
+    ${blocoValor(j, false)}
+    <label>Notas</label>
+    <textarea id="f_notas">${esc(j.notas)}</textarea>
+    ${blocoFotos(j)}
+    <button class="btn" onclick="guardar('${j.id||''}')">💾 Guardar</button>
+    ${j.id ? `<button class="btn sec" onclick="apagar('${j.id}')">Apagar trabalho</button>` : ''}
+  </div>`;
+  verNif(true); mostrarValorInicial(); if (j.id) renderFotos(j.id);
+  if (focoValor) setTimeout(()=>$('#f_valor').focus(), 50);
 }
 function formTecnico(j, focoValor){
-TAB='novo';
-const opt = (arr, v) => arr.map(o=>`<option ${o===v?'selected':''}>${o}</option>`).join('');
-const linha = (l, v) => v ? `<div class="m"><b style="color:var(--tx)">${l}:</b> ${esc(v)}</div>` : '';
-$('#app').innerHTML = `<div class="card">
-<h2 style="margin-top:4px">${esc(j.hora)} · ${esc(dataPT(j.data))}</h2>
-<div class="n" style="font-size:18px;font-weight:700">${esc(j.nome)}</div>
-${linha('Contribuinte', j.nif)}${linha('Morada', j.morada)}${linha('Telefone', j.telefone)}${linha('Serviço', j.servico)}
-<div class="acts">${j.telefone?`<a href="tel:${esc(j.telefone.replace(/\s/g,''))}">📞 Ligar</a>`:''}${j.morada?`<a target="_blank" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(j.morada)}">📍 Mapa</a>`:''}</div>
-</div>
-<div class="card">
-<h2 style="margin-top:4px">Fechar trabalho</h2>
-<label>Estado</label>
-<select id="f_estado" onchange="mostrarValor()">${opt(['Agendado','Orçamento dado','Em curso','Concluído'], j.estado)}</select>
-${blocoValor(j, true)}
-<label>Notas</label>
-<textarea id="f_notas" placeholder="O que foi feito, observações…">${esc(j.notas)}</textarea>
-<button class="btn" onclick="guardar('${j.id}')">💾 Guardar</button>
-</div>`;
-mostrarValorInicial();
-if (focoValor) setTimeout(()=>$('#f_valor').focus(), 50);
+  TAB='novo';
+  const opt = (arr, v) => arr.map(o=>`<option ${o===v?'selected':''}>${o}</option>`).join('');
+  const linha = (l, v) => v ? `<div class="m"><b style="color:var(--tx)">${l}:</b> ${esc(v)}</div>` : '';
+  $('#app').innerHTML = `<div class="card">
+    <h2 style="margin-top:4px">${esc(j.hora)} · ${esc(dataPT(j.data))}</h2>
+    <div class="n" style="font-size:18px;font-weight:700">${esc(j.nome)}</div>
+    ${linha('Contribuinte', j.nif)}${linha('Morada', j.morada)}${linha('Telefone', j.telefone)}${linha('Serviço', j.servico)}
+    <div class="acts">${j.telefone?`<a href="tel:${esc(j.telefone.replace(/\s/g,''))}">📞 Ligar</a>`:''}${j.morada?`<a target="_blank" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(j.morada)}">📍 Mapa</a>`:''}</div>
+  </div>
+  <div class="card">
+    <h2 style="margin-top:4px">Fechar trabalho</h2>
+    <label>Estado</label>
+    <select id="f_estado" onchange="mostrarValor()">${opt(['Agendado','Orçamento dado','Em curso','Concluído'], j.estado)}</select>
+    ${blocoValor(j, true)}
+    <label>Notas</label>
+    <textarea id="f_notas" placeholder="O que foi feito, observações…">${esc(j.notas)}</textarea>
+    ${blocoFotos(j)}
+    <button class="btn" onclick="guardar('${j.id}')">💾 Guardar</button>
+  </div>`;
+  mostrarValorInicial(); renderFotos(j.id);
+  if (focoValor) setTimeout(()=>$('#f_valor').focus(), 50);
 }
 function verNif(inicial){
-const n = $('#f_nif').value.replace(/\D/g,''), m = $('#nifmsg');
-if (!n){ m.textContent=''; return; }
-if (n.length < 9){ m.className='hint'; m.textContent=''; return; }
-if (!nifValido(n)){ m.className='hint bad'; m.textContent='⚠️ NIF inválido — confirme os dígitos'; return; }
-const ant = JOBS.filter(j=>j.nif===n).sort((a,b)=>b.atualizado.localeCompare(a.atualizado))[0];
-m.className='hint good';
-m.textContent = ant ? `✓ Cliente já conhecido: ${ant.nome}` : '✓ NIF válido';
-if (ant && !inicial) ['nome','morada','telefone'].forEach(k => { const e = $('#f_'+k); if (e && !e.value) e.value = ant[k]; });
+  const n = $('#f_nif').value.replace(/\D/g,''), m = $('#nifmsg');
+  if (!n){ m.textContent=''; return; }
+  if (n.length < 9){ m.className='hint'; m.textContent=''; return; }
+  if (!nifValido(n)){ m.className='hint bad'; m.textContent='⚠️ NIF inválido — confirme os dígitos'; return; }
+  const ant = JOBS.filter(j=>j.nif===n).sort((a,b)=>b.atualizado.localeCompare(a.atualizado))[0];
+  m.className='hint good';
+  m.textContent = ant ? `✓ Cliente já conhecido: ${ant.nome}` : '✓ NIF válido';
+  if (ant && !inicial) ['nome','morada','telefone'].forEach(k => { const e = $('#f_'+k); if (e && !e.value) e.value = ant[k]; });
 }
 function preencherPorNome(){
-const nome = $('#f_nome').value;
-const ant = JOBS.filter(j=>j.nome===nome).sort((a,b)=>b.atualizado.localeCompare(a.atualizado))[0];
-if (!ant) return;
-if(!$('#f_nif').value) $('#f_nif').value = ant.nif;
-if(!$('#f_morada').value) $('#f_morada').value = ant.morada;
-if(!$('#f_telefone').value) $('#f_telefone').value = ant.telefone;
-verNif(true);
+  const nome = $('#f_nome').value;
+  const ant = JOBS.filter(j=>j.nome===nome).sort((a,b)=>b.atualizado.localeCompare(a.atualizado))[0];
+  if (!ant) return;
+  if(!$('#f_nif').value) $('#f_nif').value = ant.nif;
+  if(!$('#f_morada').value) $('#f_morada').value = ant.morada;
+  if(!$('#f_telefone').value) $('#f_telefone').value = ant.telefone;
+  verNif(true);
 }
 async function guardar(id){
-const g = k => { const e = $('#f_'+k); return e ? e.value : undefined; };
-const concl = g('estado') === 'Concluído';
-const d = { id, estado:g('estado'), notas:g('notas') };
-const orcs = ORCS.map(o=>({d:String(o.d||'').trim(), v:String(o.v||'').replace(',', '.').trim(), a:!!o.a})).filter(o=>o.d||o.v);
-if (orcs.some(o=>o.v==='' || isNaN(Number(o.v)))) return toast('Falta o valor (€) de um orçamento');
-if (d.estado === 'Orçamento dado' && !orcs.length) return toast('Coloque pelo menos um orçamento');
-d.orcamentos = orcs.map(o=>({d:o.d, v:Number(o.v), a:o.a}));
-if (concl){ d.valor = g('valor').replace(',', '.').trim(); d.pagamento = g('pagamento'); d.fatura = g('fatura'); }
-if (PAPEL === 'tecnico' && concl && d.fatura === 'Sim'){
-d.nif = g('nif').replace(/\D/g,''); d.nome = g('nome').trim();
-if (!nifValido(d.nif)) return toast('Contribuinte inválido — confirme os 9 dígitos');
-if (!d.nome) return toast('Falta o nome completo para a fatura');
-}
-if (PAPEL !== 'tecnico') Object.assign(d, { data:g('data'), hora:g('hora'), duracao:g('duracao'), tecnico:g('tecnico'),
-nif:g('nif'), nome:g('nome'), morada:g('morada'), telefone:g('telefone'), servico:g('servico') });
-if (PAPEL !== 'tecnico'){
-if (!d.nome.trim()) return toast('Falta o nome do cliente');
-if (!d.data || !d.hora) return toast('Falta a data ou hora');
-}
-if (concl && !d.valor) return toast('Coloque o valor do trabalho');
-if (concl && isNaN(Number(d.valor))) return toast('Valor inválido');
-setJobs(await call('guardar', d));
-toast('Guardado ✓'); ir('agenda');
+  const g = k => { const e = $('#f_'+k); return e ? e.value : undefined; };
+  const concl = g('estado') === 'Concluído';
+  const d = { id, estado:g('estado'), notas:g('notas') };
+  const orcs = ORCS.map(o=>({d:String(o.d||'').trim(), v:String(o.v||'').replace(',', '.').trim(), a:!!o.a})).filter(o=>o.d||o.v);
+  if (orcs.some(o=>o.v==='' || isNaN(Number(o.v)))) return toast('Falta o valor (€) de um orçamento');
+  if (d.estado === 'Orçamento dado' && !orcs.length) return toast('Coloque pelo menos um orçamento');
+  d.orcamentos = orcs.map(o=>({d:o.d, v:Number(o.v), a:o.a}));
+  if (concl){ d.valor = g('valor').replace(',', '.').trim(); d.pagamento = g('pagamento'); d.fatura = g('fatura'); }
+  if (PAPEL === 'tecnico' && concl && d.fatura === 'Sim'){
+    d.nif = g('nif').replace(/\D/g,''); d.nome = g('nome').trim();
+    if (!nifValido(d.nif)) return toast('Contribuinte inválido — confirme os 9 dígitos');
+    if (!d.nome) return toast('Falta o nome completo para a fatura');
+  }
+  if (PAPEL !== 'tecnico') Object.assign(d, { data:g('data'), hora:g('hora'), duracao:g('duracao'), tecnico:g('tecnico'),
+    nif:g('nif'), nome:g('nome'), morada:g('morada'), telefone:g('telefone'), servico:g('servico') });
+  if (PAPEL !== 'tecnico'){
+    if (!d.nome.trim()) return toast('Falta o nome do cliente');
+    if (!d.data || !d.hora) return toast('Falta a data ou hora');
+  }
+  if (concl && !d.valor) return toast('Coloque o valor do trabalho');
+  if (concl && isNaN(Number(d.valor))) return toast('Valor inválido');
+  setJobs(await call('guardar', d));
+  toast('Guardado ✓'); ir('agenda');
 }
 async function apagar(id){
-if (!confirm('Apagar este trabalho? Isto não pode ser desfeito.')) return;
-setJobs(await call('apagar', {id})); toast('Apagado'); ir('agenda');
+  if (!confirm('Apagar este trabalho? Isto não pode ser desfeito.')) return;
+  setJobs(await call('apagar', {id})); toast('Apagado'); ir('agenda');
 }
 
 /* ---------- valores ---------- */
 function valores(){
-const meses = [...new Set(JOBS.map(j=>j.data.slice(0,7)))].sort().reverse();
-const atual = window._mes || hoje().slice(0,7);
-if (!meses.includes(atual)) meses.unshift(atual);
-const js = JOBS.filter(j=>j.data.slice(0,7)===atual && j.estado==='Concluído');
-const ganho = r2(js.reduce((s,j)=>s+(Number(j.valor)||0),0)); // o seu ganho (sem IVA)
-const ivaTot = r2(js.reduce((s,j)=>s+ivaDe(j),0)); // IVA a entregar ao Estado
-const recebido = r2(ganho + ivaTot); // o que os clientes pagaram
-const porPagar = r2(js.filter(j=>j.pagamento==='Por pagar').reduce((s,j)=>s+totalDe(j),0));
-const semValor = js.filter(j=>j.valor==='').length;
-const comFat = r2(js.filter(j=>j.fatura==='Sim').reduce((s,j)=>s+(Number(j.valor)||0),0));
-const nOrc = JOBS.filter(j=>j.data.slice(0,7)===atual && j.estado==='Orçamento dado').length;
-const agrupa = k => { const m={}; js.forEach(j=>{ const c=j[k]||'—'; m[c]=(m[c]||0)+(Number(j.valor)||0); }); return Object.entries(m).sort((a,b)=>b[1]-a[1]); };
-const nomeMes = m => { const [y,mm]=m.split('-'); return new Date(y,mm-1,1).toLocaleDateString('pt-PT',{month:'long',year:'numeric'}); };
-$('#app').innerHTML = `
-<select onchange="window._mes=this.value;valores()">${meses.map(m=>`<option value="${m}" ${m===atual?'selected':''}>${nomeMes(m)}</option>`).join('')}</select>
-<div class="kpis" style="margin-top:10px">
-<div class="card kpi"><div class="l">💶 O seu ganho (sem IVA)</div><div class="v" style="color:var(--ok)">${eur(ganho)}</div></div>
-<div class="card kpi"><div class="l">🏛️ IVA a entregar ao Estado</div><div class="v" style="color:var(--er)">${eur(ivaTot)}</div></div>
-<div class="card kpi"><div class="l">Recebido dos clientes (com IVA)</div><div class="v">${eur(recebido)}</div></div>
-<div class="card kpi"><div class="l">Por receber</div><div class="v" style="color:var(--av)">${eur(porPagar)}</div></div>
-<div class="card kpi"><div class="l">Com fatura (sem IVA)</div><div class="v">${eur(comFat)}</div></div>
-<div class="card kpi"><div class="l">Sem fatura</div><div class="v">${eur(ganho-comFat)}</div></div>
-<div class="card kpi"><div class="l">Trabalhos concluídos</div><div class="v">${js.length}</div></div>
-<div class="card kpi"><div class="l">Orçamentos dados</div><div class="v">${nOrc}</div></div>
-<div class="card kpi"><div class="l">Sem valor registado</div><div class="v" style="color:${semValor?'var(--er)':'inherit'}">${semValor}</div></div>
-</div>
-<h2>Por técnico <span style="text-transform:none;font-weight:400">(sem IVA)</span></h2><div class="card"><table>${agrupa('tecnico').map(([k,v])=>`<tr><td>${esc(k)}</td><td class="r">${eur(v)}</td></tr>`).join('')||'<tr><td class="vazio">—</td></tr>'}</table></div>
-<h2>Por forma de pagamento</h2><div class="card"><table>${agrupa('pagamento').map(([k,v])=>`<tr><td>${esc(k)}</td><td class="r">${eur(v)}</td></tr>`).join('')||'<tr><td class="vazio">—</td></tr>'}</table></div>
-<h2>Trabalhos do mês</h2><div class="card"><table><tr><th>Data</th><th>Cliente</th><th>Fatura / NIF</th><th class="r">Valor</th><th class="r">IVA</th></tr>
-${js.sort((a,b)=>a.data.localeCompare(b.data)).map(j=>`<tr onclick="editar('${j.id}')"><td>${j.data.slice(8)}/${j.data.slice(5,7)}</td><td>${esc(j.nome)}</td><td>${j.fatura==='Sim'?'🧾 '+esc(j.nif):'—'}</td><td class="r">${j.valor===''?'<span class="bad">—</span>':eur(j.valor)}</td><td class="r">${ivaDe(j)?eur(ivaDe(j)):'—'}</td></tr>`).join('')}
-</table></div>`;
-}
-
-/* ============================================================
-* FINANÇAS (serviço + casa) — só para o dono (papel 'admin')
-* Espelha a app antiga (Claude), mas agora guardada no mesmo
-* Google Sheets da agenda. Os trabalhos concluídos e pagos entram
-* aqui sozinhos (ver financaAutoMovimento_ no Codigo.gs); o resto
-* é lançado à mão (contas, bens, movimentos de casa, câmbio, CDI).
-* ============================================================ */
-let FIN = null, FIN_MES = null, FIN_OCULTAR = false;
-const FIN_CATS = {
-Casa: { Entrada: ['Outras entradas','Salário'], Saída: ['Água','Supermercado','Lazer / restaurantes','Educação','Transporte','Saúde','Outras despesas'] },
-Serviço: { Entrada: ['Desentupimentos','Outras entradas'], Saída: ['Combustível','Portagens / estacionamento','Google Ads / publicidade','Telemóvel / internet','Material e equipamento','Outras despesas'] }
-};
-const brl = v => (Number(v) || 0).toLocaleString('pt-PT', {style:'currency', currency:'BRL'});
-function paraEur(conta){
-if (conta.moeda === 'BRL') { const c = FIN && FIN.cambio && Number(FIN.cambio.eurbrl); return c ? (Number(conta.saldo)||0)/c : 0; }
-return Number(conta.saldo) || 0;
-}
-async function financas(){
-if (!PODE_FINANCAS) return ir('agenda');
-TAB='financas'; document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on', b.dataset.t==='financas'));
-if (!FIN_MES) FIN_MES = hoje().slice(0,7);
-$('#app').innerHTML = `<div class="card vazio">A carregar finanças…</div>`;
-try { FIN = await call('fin_tudo'); } catch(e){ return; }
-renderFinancas();
-}
-function renderFinancas(){
-if (!FIN) return financas();
-const contas = FIN.contas||[], bens = FIN.bens||[], movs = FIN.movimentos||[];
-const eurbrl = Number(FIN.cambio && FIN.cambio.eurbrl) || 0;
-const totalBens = bens.reduce((s,b)=>s+(Number(b.valor)||0),0);
-// os bens (carrinhas, equipamento, coisas de casa) estão todos em Portugal
-const porPais = pais => contas.filter(c=>(c.pais||'Portugal')===pais).reduce((s,c)=>s+paraEur(c),0) + (pais==='Portugal' ? totalBens : 0);
-const totalPT = porPais('Portugal'), totalBR = porPais('Brasil');
-const total = totalPT + totalBR;
-
-const mesesSet = new Set(movs.map(m=>m.data.slice(0,7))); mesesSet.add(FIN_MES);
-const meses = [...mesesSet].sort().reverse();
-const movsMes = movs.filter(m=>m.data.slice(0,7)===FIN_MES);
-const resumoArea = area => ({
-e: movsMes.filter(m=>m.area===area&&m.tipo==='Entrada').reduce((s,m)=>s+Number(m.valor),0),
-s: movsMes.filter(m=>m.area===area&&m.tipo==='Saída').reduce((s,m)=>s+Number(m.valor),0)
-});
-const rCasa = resumoArea('Casa'), rServico = resumoArea('Serviço');
-const v = n => FIN_OCULTAR ? '••••' : eur(n);
-
-$('#app').innerHTML = `
-<div class="card kpi" style="text-align:center">
-<div class="l" style="display:flex;justify-content:center;align-items:center;gap:8px">Património total <span onclick="FIN_OCULTAR=!FIN_OCULTAR;renderFinancas()" style="cursor:pointer">${FIN_OCULTAR?'🙈':'👁️'}</span></div>
-<div class="v" style="font-size:28px">${v(total)}</div>
-</div>
-<div class="kpis">
-<div class="card kpi"><div class="l">🇵🇹 Portugal</div><div class="v">${v(totalPT)}</div></div>
-<div class="card kpi"><div class="l">🇧🇷 Brasil</div><div class="v">${v(totalBR)}</div></div>
-</div>
-
-<h2>Contas</h2>
-<div class="card">${contas.slice().sort((a,b)=>a.ordem-b.ordem).map(c=>`
-<div style="padding:8px 0;border-bottom:1px solid var(--bd)">
-<div style="display:flex;justify-content:space-between;align-items:baseline">
-<div><b>${esc(c.nome)}</b><div style="font-size:12px;color:var(--mu)">${c.pais==='Brasil'?'🇧🇷':'🇵🇹'} ${esc(c.pais||'')}${c.cdi?' · '+esc(c.cdi)+'% do CDI':''}</div></div>
-<div style="text-align:right">
-<div><b>${FIN_OCULTAR?'••••':(c.moeda==='BRL'?brl(c.saldo):eur(c.saldo))}</b></div>
-${c.moeda==='BRL'&&eurbrl?`<div style="font-size:12px;color:var(--mu)">≈ ${v(paraEur(c))}</div>`:''}
-</div></div>
-<div class="acts"><button onclick="finEditarSaldo('${c.id}')">✏️ Atualizar saldo</button></div>
-</div>`).join('') || '<div class="vazio">Sem contas registadas</div>'}</div>
-
-<div class="card">
-<label>Câmbio EUR → BRL</label>
-<div class="row"><div><input id="fin_eurbrl" inputmode="decimal" value="${eurbrl||''}"></div>
-<div style="flex:0 0 auto"><button class="btn" style="margin-top:0;width:auto;padding:11px 16px" onclick="finGuardarCambio()">Guardar</button></div></div>
-<div class="hint">1 EUR = ${eurbrl||'—'} BRL${FIN.cambio&&FIN.cambio.data?' · atualizado em '+esc(FIN.cambio.data):''}</div>
-</div>
-
-<div class="card">
-<label>Taxa CDI anual (%)</label>
-<div class="row"><div><input id="fin_cdi" inputmode="decimal" value="${(FIN.cdi&&FIN.cdi.taxaAnual)||''}"></div>
-<div style="flex:0 0 auto"><button class="btn" style="margin-top:0;width:auto;padding:11px 16px" onclick="finGuardarCdi()">Guardar</button></div></div>
-<div class="hint">${FIN.cdi&&FIN.cdi.data?'Atualizado em '+esc(FIN.cdi.data):''}${FIN.cdi&&FIN.cdi.fonte?' · fonte: '+esc(FIN.cdi.fonte):''}</div>
-</div>
-
-<h2>Bens <span style="text-transform:none;font-weight:400">(${v(totalBens)})</span></h2>
-<div class="card">${bens.slice().sort((a,b)=>a.ordem-b.ordem).map(b=>`
-<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--bd)">
-<div>${esc(b.nome)} <span style="font-size:12px;color:var(--mu)">· ${esc(b.area)}</span></div>
-<div style="display:flex;gap:10px;align-items:center"><b>${v(b.valor)}</b>
-<button onclick="finEditarBem('${b.id}')" aria-label="Editar" style="border:0;background:none;color:var(--az);font-size:16px">✏️</button>
-<button onclick="finApagarBem('${b.id}')" aria-label="Apagar" style="border:0;background:none;color:var(--er);font-size:16px">✕</button></div>
-</div>`).join('') || '<div class="vazio">Sem bens registados</div>'}
-<button type="button" class="addorc" onclick="finFormBem()">+ Adicionar bem</button>
-<div id="finBemForm"></div>
-</div>
-
-<h2>Movimentos</h2>
-<select onchange="FIN_MES=this.value;renderFinancas()">${meses.map(m=>`<option value="${m}" ${m===FIN_MES?'selected':''}>${esc(m)}</option>`).join('')}</select>
-<div class="kpis" style="margin-top:10px">
-<div class="card kpi"><div class="l">🏠 Casa — entradas</div><div class="v" style="color:var(--ok)">${v(rCasa.e)}</div></div>
-<div class="card kpi"><div class="l">🏠 Casa — saídas</div><div class="v" style="color:var(--er)">${v(rCasa.s)}</div></div>
-<div class="card kpi"><div class="l">🔧 Serviço — entradas</div><div class="v" style="color:var(--ok)">${v(rServico.e)}</div></div>
-<div class="card kpi"><div class="l">🔧 Serviço — saídas</div><div class="v" style="color:var(--er)">${v(rServico.s)}</div></div>
-</div>
-
-<div class="card">
-<button type="button" class="addorc" onclick="finFormMov()">+ Novo movimento</button>
-<div id="finMovForm"></div>
-</div>
-
-<div class="card"><table><tr><th>Data</th><th>Área</th><th>Categoria</th><th class="r">Valor</th><th></th></tr>
-${movsMes.slice().sort((a,b)=>b.data.localeCompare(a.data)).map(m=>`<tr>
-<td>${m.data.slice(8)}/${m.data.slice(5,7)}</td>
-<td>${esc(m.area)}${m.origemJobId?' 🔗':''}</td>
-<td>${esc(m.categoria)}<div style="font-size:12px;color:var(--mu)">${esc(m.descricao||'')}</div></td>
-<td class="r" style="color:${m.tipo==='Entrada'?'var(--ok)':'var(--er)'}">${m.tipo==='Entrada'?'+':'−'}${v(m.valor)}</td>
-<td><button onclick="finApagarMov('${m.id}')" aria-label="Apagar" style="border:0;background:none;color:var(--er)">✕</button></td>
-</tr>`).join('') || '<tr><td class="vazio" colspan="5">Sem movimentos este mês</td></tr>'}
-</table></div>
-<div class="hint">🔗 = criado automaticamente a partir de um trabalho concluído e pago na Agenda.</div>`;
-}
-async function finEditarSaldo(id){
-const c = (FIN.contas||[]).find(x=>x.id===id); if (!c) return;
-const novo = prompt('Novo saldo de ' + c.nome + ' (' + c.moeda + ')', c.saldo);
-if (novo===null) return;
-const valor = Number(String(novo).replace(',','.'));
-if (isNaN(valor)) return toast('Valor inválido');
-FIN = await call('fin_conta_saldo', {id, saldo: valor});
-toast('Saldo atualizado ✓'); renderFinancas();
-}
-function finFormBem(){
-$('#finBemForm').innerHTML = `<div style="margin-top:10px">
-<label>Nome do bem</label><input id="fb_nome">
-<label>Valor (€)</label><input id="fb_valor" inputmode="decimal">
-<label>Área</label><select id="fb_area"><option>Serviço</option><option>Casa</option></select>
-<button class="btn" onclick="finGuardarBemNovo()">💾 Guardar bem</button></div>`;
-}
-async function finGuardarBemNovo(){
-const nome = $('#fb_nome').value.trim(), valor = $('#fb_valor').value;
-if (!nome) return toast('Falta o nome do bem');
-if (valor==='' || isNaN(Number(String(valor).replace(',','.')))) return toast('Valor inválido');
-FIN = await call('fin_bem_novo', {nome, valor, area: $('#fb_area').value});
-toast('Bem adicionado ✓'); $('#finBemForm').innerHTML=''; renderFinancas();
-}
-async function finEditarBem(id){
-const b = (FIN.bens||[]).find(x=>x.id===id); if (!b) return;
-const novo = prompt('Novo valor de ' + b.nome + ' (€)', b.valor);
-if (novo===null) return;
-const valor = Number(String(novo).replace(',','.'));
-if (isNaN(valor)) return toast('Valor inválido');
-FIN = await call('fin_bem_editar', {id, valor});
-toast('Bem atualizado ✓'); renderFinancas();
-}
-async function finApagarBem(id){
-if (!confirm('Apagar este bem?')) return;
-FIN = await call('fin_bem_apagar', {id}); toast('Apagado'); renderFinancas();
-}
-async function finGuardarCambio(){
-const valor = $('#fin_eurbrl').value;
-if (!valor || isNaN(Number(String(valor).replace(',','.')))) return toast('Câmbio inválido');
-FIN = await call('fin_cambio', {eurbrl: valor}); toast('Câmbio atualizado ✓'); renderFinancas();
-}
-async function finGuardarCdi(){
-const valor = $('#fin_cdi').value;
-if (!valor || isNaN(Number(String(valor).replace(',','.')))) return toast('Taxa inválida');
-FIN = await call('fin_cdi', {taxaAnual: valor, fonte: (FIN.cdi&&FIN.cdi.fonte)||''}); toast('CDI atualizado ✓'); renderFinancas();
-}
-function finFormMov(){
-$('#finMovForm').innerHTML = `<div style="margin-top:10px">
-<div class="row"><div><label>Data</label><input id="fm_data" type="date" value="${hoje()}"></div>
-<div><label>Conta</label><select id="fm_conta">${(FIN.contas||[]).slice().sort((a,b)=>a.ordem-b.ordem).map(c=>`<option value="${esc(c.id)}">${esc(c.nome)}</option>`).join('')}</select></div></div>
-<div class="row"><div><label>Área</label><select id="fm_area" onchange="finAtualizarCats()"><option>Casa</option><option>Serviço</option></select></div>
-<div><label>Tipo</label><select id="fm_tipo" onchange="finAtualizarCats()"><option>Saída</option><option>Entrada</option></select></div></div>
-<label>Categoria</label><input id="fm_categoria" list="fm_catlist"><datalist id="fm_catlist"></datalist>
-<label>Descrição</label><input id="fm_descricao">
-<label>Valor (€)</label><input id="fm_valor" inputmode="decimal">
-<button class="btn" onclick="finGuardarMovNovo()">💾 Guardar movimento</button></div>`;
-finAtualizarCats();
-}
-function finAtualizarCats(){
-const area = $('#fm_area').value, tipo = $('#fm_tipo').value;
-const cats = (FIN_CATS[area] && FIN_CATS[area][tipo]) || [];
-$('#fm_catlist').innerHTML = cats.map(c=>`<option value="${esc(c)}">`).join('');
-}
-async function finGuardarMovNovo(){
-const valor = $('#fm_valor').value;
-if (!valor || isNaN(Number(String(valor).replace(',','.')))) return toast('Valor inválido');
-if (!$('#fm_conta').value) return toast('Escolha a conta');
-FIN = await call('fin_mov_novo', { data: $('#fm_data').value, area: $('#fm_area').value, tipo: $('#fm_tipo').value,
-categoria: $('#fm_categoria').value.trim(), descricao: $('#fm_descricao').value.trim(), valor, contaId: $('#fm_conta').value });
-toast('Movimento guardado ✓'); $('#finMovForm').innerHTML=''; renderFinancas();
-}
-async function finApagarMov(id){
-if (!confirm('Apagar este movimento? O saldo da conta é corrigido automaticamente. Se vier de um trabalho da Agenda, volta a aparecer caso o trabalho seja guardado de novo.')) return;
-FIN = await call('fin_mov_apagar', {id}); toast('Apagado'); renderFinancas();
+  const meses = [...new Set(JOBS.map(j=>j.data.slice(0,7)))].sort().reverse();
+  const atual = window._mes || hoje().slice(0,7);
+  if (!meses.includes(atual)) meses.unshift(atual);
+  const js = JOBS.filter(j=>j.data.slice(0,7)===atual && j.estado==='Concluído');
+  const ganho = r2(js.reduce((s,j)=>s+(Number(j.valor)||0),0));              // o seu ganho (sem IVA)
+  const ivaTot = r2(js.reduce((s,j)=>s+ivaDe(j),0));                          // IVA a entregar ao Estado
+  const recebido = r2(ganho + ivaTot);                                          // o que os clientes pagaram
+  const porPagar = r2(js.filter(j=>j.pagamento==='Por pagar').reduce((s,j)=>s+totalDe(j),0));
+  const semValor = js.filter(j=>j.valor==='').length;
+  const comFat = r2(js.filter(j=>j.fatura==='Sim').reduce((s,j)=>s+(Number(j.valor)||0),0));
+  const nOrc = JOBS.filter(j=>j.data.slice(0,7)===atual && j.estado==='Orçamento dado').length;
+  const agrupa = k => { const m={}; js.forEach(j=>{ const c=j[k]||'—'; m[c]=(m[c]||0)+(Number(j.valor)||0); }); return Object.entries(m).sort((a,b)=>b[1]-a[1]); };
+  const nomeMes = m => { const [y,mm]=m.split('-'); return new Date(y,mm-1,1).toLocaleDateString('pt-PT',{month:'long',year:'numeric'}); };
+  $('#app').innerHTML = `
+    <select onchange="window._mes=this.value;valores()">${meses.map(m=>`<option value="${m}" ${m===atual?'selected':''}>${nomeMes(m)}</option>`).join('')}</select>
+    <div class="kpis" style="margin-top:10px">
+      <div class="card kpi"><div class="l">💶 O seu ganho (sem IVA)</div><div class="v" style="color:var(--ok)">${eur(ganho)}</div></div>
+      <div class="card kpi"><div class="l">🏛️ IVA a entregar ao Estado</div><div class="v" style="color:var(--er)">${eur(ivaTot)}</div></div>
+      <div class="card kpi"><div class="l">Recebido dos clientes (com IVA)</div><div class="v">${eur(recebido)}</div></div>
+      <div class="card kpi"><div class="l">Por receber</div><div class="v" style="color:var(--av)">${eur(porPagar)}</div></div>
+      <div class="card kpi"><div class="l">Com fatura (sem IVA)</div><div class="v">${eur(comFat)}</div></div>
+      <div class="card kpi"><div class="l">Sem fatura</div><div class="v">${eur(ganho-comFat)}</div></div>
+      <div class="card kpi"><div class="l">Trabalhos concluídos</div><div class="v">${js.length}</div></div>
+      <div class="card kpi"><div class="l">Orçamentos dados</div><div class="v">${nOrc}</div></div>
+      <div class="card kpi"><div class="l">Sem valor registado</div><div class="v" style="color:${semValor?'var(--er)':'inherit'}">${semValor}</div></div>
+    </div>
+    ${(()=>{ const pr = JOBS.filter(j=>j.estado==='Concluído' && j.pagamento==='Por pagar');
+      return pr.length ? `<h2 style="color:var(--av)">💶 Por receber (todos os meses)</h2><div class="card"><table>${pr.map(j=>`<tr><td>${j.data.slice(8)}/${j.data.slice(5,7)}</td><td>${esc(j.nome)}</td><td class="r">${eur(totalDe(j))}</td><td class="r"><button class="pagar" style="border:0;border-radius:7px;padding:6px 10px" onclick="marcarPago('${j.id}')">Pago</button></td></tr>`).join('')}</table></div>` : ''; })()}
+    <h2>Por técnico <span style="text-transform:none;font-weight:400">(sem IVA)</span></h2><div class="card"><table>${agrupa('tecnico').map(([k,v])=>`<tr><td>${esc(k)}</td><td class="r">${eur(v)}</td></tr>`).join('')||'<tr><td class="vazio">—</td></tr>'}</table></div>
+    <h2>Por forma de pagamento</h2><div class="card"><table>${agrupa('pagamento').map(([k,v])=>`<tr><td>${esc(k)}</td><td class="r">${eur(v)}</td></tr>`).join('')||'<tr><td class="vazio">—</td></tr>'}</table></div>
+    <h2>Trabalhos do mês</h2><div class="card"><table><tr><th>Data</th><th>Cliente</th><th>Fatura / NIF</th><th class="r">Valor</th><th class="r">IVA</th></tr>
+      ${js.sort((a,b)=>a.data.localeCompare(b.data)).map(j=>`<tr onclick="editar('${j.id}')"><td>${j.data.slice(8)}/${j.data.slice(5,7)}</td><td>${esc(j.nome)}</td><td>${j.fatura==='Sim'?'🧾 '+esc(j.nif):'—'}</td><td class="r">${j.valor===''?'<span class="bad">—</span>':eur(j.valor)}</td><td class="r">${ivaDe(j)?eur(ivaDe(j)):'—'}</td></tr>`).join('')}
+    </table></div>`;
 }
 
 /* ---------- ao voltar à app (ex.: tocou na notificação) ---------- */
 document.addEventListener('visibilitychange', async () => {
-if (document.visibilityState !== 'visible' || !PIN || !PAPEL) return;
-try { const r = await call('entrar', {}, true); setJobs(r.jobs); if (TAB==='agenda') lista(); else if (TAB==='valores') valores(); } catch(e){}
+  if (document.visibilityState !== 'visible' || !PIN || !PAPEL) return;
+  try { const r = await call('entrar', {}, true); setJobs(r.jobs); if (TAB==='agenda') lista(); else if (TAB==='valores') valores(); } catch(e){}
 });
 
 /* ---------- arranque ---------- */
