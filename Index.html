@@ -292,7 +292,7 @@ html += `<h2>Orçamentos dados</h2>` + (orc.length ? orc.map(cartao).join('') : 
 const ant = l.filter(j=>j.data<h).sort(ord).reverse();
 html += `<h2>Anteriores</h2>` + (ant.length ? ant.map(cartao).join('') : `<div class="card vazio">Sem trabalhos anteriores</div>`);
 }
-$('#lista').innerHTML = html + '<div style="text-align:center;font-size:11px;color:var(--mu);margin:18px 0 4px">versão 12 · 02/10</div>';
+$('#lista').innerHTML = html + '<div style="text-align:center;font-size:11px;color:var(--mu);margin:18px 0 4px">versão 13 · 02/10</div>';
 }
 
 /* ---------- formulário ---------- */
@@ -452,7 +452,7 @@ $('#app').innerHTML = `<div class="card">
 <div class="row"><div><label>Data</label><input id="f_data" type="date" value="${esc(j.data)}"></div>
 <div><label>Hora</label><input id="f_hora" type="time" value="${esc(j.hora)}"></div></div>
 <div class="row"><div><label>Duração</label><select id="f_duracao">${[30,60,90,120,180,240].map(m=>`<option value="${m}" ${String(m)===String(j.duracao||60)?'selected':''}>${m<60?m+' min':(m/60)+' h'}</option>`).join('')}</select></div>
-<div><label>Técnico</label><select id="f_tecnico"><option value="">— Qualquer um —</option>${[...new Set(TRAB.concat(j.tecnico?[j.tecnico]:[]))].map(n=>`<option ${n===j.tecnico?'selected':''}>${esc(n)}</option>`).join('')}</select></div></div>
+<div><label>Técnico</label><select id="f_tecnico"><option value="">— Qualquer um —</option>${[...new Set(TRAB.concat(TRAB.length>1?[TRAB.join(' + ')]:[]).concat(j.tecnico?[j.tecnico]:[]))].map(n=>`<option ${n===j.tecnico?'selected':''}>${esc(n)}</option>`).join('')}</select></div></div>
 
 <h2>Cliente</h2>
 <label>Contribuinte (NIF) <span style="font-size:12px">— só se quiser fatura</span></label>
@@ -497,8 +497,9 @@ ${linha('Contribuinte', j.nif)}${linha('Morada', j.morada)}${linha('Telefone', j
 <label>Estado</label>
 <select id="f_estado" onchange="mostrarValor()">${opt(['Agendado','Orçamento dado','Em curso','Concluído'], j.estado)+`<option value="Concluído|Por pagar" ${j.estado==='Concluído'&&j.pagamento==='Por pagar'?'selected':''}>⏳ Concluído – cliente falta pagar</option>`}</select>
 ${blocoValor(j, true)}
+${TRAB.length>1 && TRAB.includes(NOME) ? `<label>Quem fez o trabalho</label><select id="f_tecnico">${[NOME, [NOME].concat(TRAB.filter(n=>n!==NOME)).join(' + ')].map(n=>`<option ${n===j.tecnico||(n===NOME&&!j.tecnico)?'selected':''}>${esc(n)}</option>`).join('')}</select>` : ''}
 <label>Notas</label>
-    <textarea id="f_notas" placeholder="O que foi feito, observações…">${esc(j.notas)}</textarea>
+<textarea id="f_notas" placeholder="O que foi feito, observações…">${esc(j.notas)}</textarea>
     ${blocoFotos(j)}
     <button class="btn" onclick="guardar('${j.id}')">💾 Guardar</button>
   </div>`;
@@ -540,7 +541,8 @@ d.nif = g('nif').replace(/\D/g,''); d.nome = g('nome').trim();
 if (!nifValido(d.nif)) return toast('Contribuinte inválido — confirme os 9 dígitos');
 if (!d.nome) return toast('Falta o nome completo para a fatura');
 }
-if (PAPEL !== 'tecnico') Object.assign(d, { data:g('data'), hora:g('hora'), duracao:g('duracao'), tecnico:g('tecnico'),
+if (PAPEL === 'tecnico' && $('#f_tecnico')) d.tecnico = g('tecnico');
+  if (PAPEL !== 'tecnico') Object.assign(d, { data:g('data'), hora:g('hora'), duracao:g('duracao'), tecnico:g('tecnico'),
 nif:g('nif'), nome:g('nome'), morada:g('morada'), telefone:g('telefone'), servico:g('servico') });
 if (PAPEL !== 'tecnico'){
 if (!d.nome.trim()) return toast('Falta o nome do cliente');

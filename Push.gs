@@ -140,7 +140,7 @@ function lembretes() {
     const ini = Utilities.parseDate(o.data + ' ' + o.hora, tz, 'yyyy-MM-dd HH:mm').getTime();
     const falta = (ini - agora) / 60000;
     if (falta > 0 && falta <= 65) {
-      notificar_(o.tecnico ? [o.tecnico] : trabalhadores_(), '⏰ Daqui a ' + Math.round(falta) + ' min: ' + (o.servico || 'Trabalho'),
+notificar_(o.tecnico ? tecs_(o.tecnico) : trabalhadores_(), '⏰ Daqui a ' + Math.round(falta) + ' min: ' + (o.servico || 'Trabalho'),
         o.hora + ' · ' + o.nome + (o.morada ? '\n' + o.morada : ''));
       sh.getRange(i + 2, iAv + 1).setValue('sim');
     }

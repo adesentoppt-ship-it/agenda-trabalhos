@@ -74,11 +74,13 @@ const u = UTILIZADORES.find(x => x.pin === pin);
 /* 'financas: true' no Utilizadores.gs dá acesso às Finanças a quem não é admin (ex.: a esposa/sócia). */
 return u ? { nome: u.nome, papel: u.papel, faz: u.papel === 'tecnico' || !!u.faz, financas: !!u.financas } : null;
 }
+/* Vários técnicos no mesmo trabalho: 'Alex + Lucas' */
+function tecs_(s) { return String(s || '').split(/\s*[+,]\s*/).filter(Boolean); }
 function trabalhadores_() { return UTILIZADORES.filter(x => x.papel === 'tecnico' || x.faz).map(x => x.nome); }
 function admins_() { return UTILIZADORES.filter(x => x.papel === 'admin').map(x => x.nome); }
 /* Um técnico só vê os trabalhos dele e os que ainda não têm técnico */
 function visiveis_(u, jobs) {
-return u.papel === 'admin' ? jobs : jobs.filter(j => !j.tecnico || j.tecnico === u.nome);
+return u.papel === 'admin' ? jobs : jobs.filter(j => !j.tecnico || tecs_(j.tecnico).includes(u.nome));
 }
 
 /* ---------- folha ---------- */
@@ -162,7 +164,13 @@ let campos = papel === 'tecnico'
       throw new Error('Só a Mariana ou o Alex podem marcar como pago');
     if (atual.pagamento === 'Por pagar' && d.pagamento && d.pagamento !== 'Por pagar' && !d.pagoEm)
       d.pagoEm = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd');
-if (papel === 'tecnico' && atual.tecnico && atual.tecnico !== u.nome) throw new Error('Este trabalho é de ' + atual.tecnico);
+if (papel === 'tecnico' && atual.tecnico && !tecs_(atual.tecnico).includes(u.nome)) throw new Error('Este trabalho é de ' + atual.tecnico);
+    // o técnico pode dizer que fez o trabalho com outro (ex.: 'Lucas + Alex'), mas tem de se incluir a si próprio
+    if (papel === 'tecnico' && d.tecnico !== undefined) {
+      const lista = tecs_(d.tecnico).filter(n => trabalhadores_().includes(n));
+      if (!lista.includes(u.nome)) throw new Error('O técnico tem de estar incluído');
+      t.tecnico = lista.join(' + ');
+    }
 if (papel === 'tecnico' && !atual.tecnico) t.tecnico = u.nome; // fica atribuído a quem o fez
 campos.forEach(k => {
 if (d[k] !== undefined) t[k] = String(d[k]).trim();
@@ -200,7 +208,7 @@ function avisoPara_(u, antes, t) {
 const dm = t.data ? t.data.slice(8, 10) + '/' + t.data.slice(5, 7) : '';
 const onde = t.nome + (t.morada ? '\n' + t.morada : '');
 const quem = nomes => nomes.filter(n => n !== u.nome); // não avisa quem fez a alteração
-const equipa = tec => quem(tec ? [tec] : trabalhadores_()); // técnico escolhido, ou todos
+const equipa = tec => quem(tec ? tecs_(tec) : trabalhadores_()); // técnico escolhido, ou todos
 if (u.papel === 'admin') {
 if (!antes && t.estado !== 'Cancelado')
 return [equipa(t.tecnico), '🔧 Novo trabalho: ' + (t.servico || 'Trabalho'), dm + ' às ' + t.hora + ' · ' + onde];
@@ -597,7 +605,7 @@ function fotosDe_(sh, linha) {
 function podeVer_(u, sh, linha) {
   if (u.papel === 'admin') return true;
   const tec = sh.getRange(linha, COLS.indexOf('tecnico') + 1).getDisplayValue();
-  return !tec || tec === u.nome;
+return !tec || tecs_(tec).includes(u.nome);
 }
 function addFoto_(d, u) {
   const lock = LockService.getScriptLock(); lock.waitLock(20000);
