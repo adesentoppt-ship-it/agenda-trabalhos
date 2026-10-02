@@ -158,7 +158,7 @@ const PUSH_OK = !DENTRO_GOOGLE && 'serviceWorker' in navigator && 'PushManager' 
 const IOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
 const INSTALADA = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
 let SW = null;
-if (!DENTRO_GOOGLE && 'serviceWorker' in navigator) SW = navigator.serviceWorker.register('sw.js').catch(() => null);
+if (!DENTRO_GOOGLE && 'serviceWorker' in navigator) SW =navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).catch(() => null);
 function u8(b64){ const p = '='.repeat((4 - b64.length % 4) % 4); const r = atob((b64 + p).replace(/-/g,'+').replace(/_/g,'/')); return Uint8Array.from(r, c => c.charCodeAt(0)); }
 async function guardarCfgSW(){ try { const c = await caches.open('agenda-cfg');
 await c.put(new URL('./__cfg', location.href).href, new Response(JSON.stringify({ api: API_URL, pin: PIN }))); } catch(e){} }
@@ -292,7 +292,7 @@ html += `<h2>Orçamentos dados</h2>` + (orc.length ? orc.map(cartao).join('') : 
 const ant = l.filter(j=>j.data<h).sort(ord).reverse();
 html += `<h2>Anteriores</h2>` + (ant.length ? ant.map(cartao).join('') : `<div class="card vazio">Sem trabalhos anteriores</div>`);
 }
-$('#lista').innerHTML = html;
+$('#lista').innerHTML = html + '<div style="text-align:center;font-size:11px;color:var(--mu);margin:18px 0 4px">versão 12 · 02/10</div>';
 }
 
 /* ---------- formulário ---------- */
