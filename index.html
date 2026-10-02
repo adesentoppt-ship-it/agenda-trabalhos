@@ -126,7 +126,7 @@ if (DENTRO_GOOGLE) return new Promise((ok, ko) => google.script.run
 .withSuccessHandler(r => { fim(); ok(r); })
 .withFailureHandler(e => { fim(); toast(e.message || 'Erro'); ko(e); })
 .api(PIN, acao, dados || {}));
-const ctl = new AbortController(); const tm = setTimeout(()=>ctl.abort(), 30000);
+const ctl = new AbortController(); const tm =setTimeout(()=>ctl.abort(), acao==='foto' ? 120000 : 30000);
 return fetch(API_URL, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, signal: ctl.signal,
 body: JSON.stringify({ pin: PIN, acao, dados: dados || {} }) })
 .then(r => r.json())
@@ -367,16 +367,17 @@ function renderFotos(id){
       const el = document.getElementById('ft_'+f.t); if (el) el.innerHTML = `<img src="${FOTO_CACHE[f.t]}">`; } catch(e){} });
 }
 async function addFotos(id, input){
-  const files = [...input.files]; input.value = '';
+  const files = [...input.files]; input.value = ''; let ok = 0, falhas = 0, ultimoErro = '';
   for (let i = 0; i < files.length; i++){
     try {
       toast(`A enviar foto ${i+1} de ${files.length}…`);
       const foto = await reduzir(files[i], 1600, 0.8), mini = await reduzir(files[i], 360, 0.7);
       setJobs(await call('foto', { id, foto, mini }));
-      renderFotos(id);
-    } catch(e){ toast('Erro na foto: ' + (e.message||e)); }
+      ok++; renderFotos(id);
+    } catch(e){ falhas++; ultimoErro = e.message || String(e); }
   }
-  toast('📷 Fotos guardadas'); 
+  if (!falhas) toast(ok > 1 ? '📷 ' + ok + ' fotos guardadas' : '📷 Foto guardada');
+  else alert('⚠️ ' + falhas + ' foto(s) NÃO foram enviadas' + (ok ? ' (' + ok + ' ficaram guardadas)' : '') + '.\n\nMotivo: ' + ultimoErro + '\n\nVerifique a internet e tente outra vez.');
 }
 async function verFoto(id, fid){
   const j = JOBS.find(x=>x.id===id); const f = (j.fotos||[]).find(x=>x.id===fid); if (!f) return;
@@ -430,9 +431,10 @@ const b = $('#blocoFatura'); if (!b) return;
 const s = $('#f_fatura').value === 'Sim'; b.style.display = s ? 'block' : 'none';
 if (s) { verNif(true); setTimeout(()=>$('#f_nif').focus(), 50); }
 }
-function mostrarValorInicial(){ renderOrc(); renderAceites(); if ($('#f_estado').value==='Concluído' && !$('#f_valor').value) { if (ORCS.filter(x=>x.v!=='').length===1) ORCS.forEach(x=>{ if(x.v!=='') x.a=true; }); renderAceites(); somaAceites(); } contaIva(); }
+function mostrarValorInicial(){ renderOrc(); renderAceites();if ($('#f_estado').value.startsWith('Concluído') && !$('#f_valor').value) { if (ORCS.filter(x=>x.v!=='').length===1) ORCS.forEach(x=>{ if(x.v!=='') x.a=true; }); renderAceites(); somaAceites(); } contaIva(); }
 function mostrarValor(){
-const e = $('#f_estado').value, c = e === 'Concluído', o = e === 'Orçamento dado';
+const e = $('#f_estado').value, c = e === 'Concluído' || e === 'Concluído|Por pagar', o = e === 'Orçamento dado';
+  if (e === 'Concluído|Por pagar' && $('#f_pagamento') && $('#f_pagamento').tagName === 'SELECT') $('#f_pagamento').value = 'Por pagar';
 $('#blocoValor').style.display = c ? 'block' : 'none';
 $('#blocoOrc').style.display = o ? 'block' : 'none';
 renderOrc(); renderAceites();
@@ -469,7 +471,7 @@ $('#app').innerHTML = `<div class="card">
 <input id="f_servico" list="lserv" value="${esc(j.servico)}" placeholder="Ex.: Desentupimento de esgoto">
 <datalist id="lserv">${['Desentupimento de esgoto','Desentupimento de cozinha','Desentupimento de WC','Limpeza de fossa','Inspeção vídeo','Hidrojato','Reparação de canalização'].map(s=>`<option value="${s}">`).join('')}</datalist>
 <label>Estado</label>
-<select id="f_estado" onchange="mostrarValor()">${opt(['Agendado','Orçamento dado','Em curso','Concluído','Cancelado'], j.estado)}</select>
+<select id="f_estado" onchange="mostrarValor()">${opt(['Agendado','Orçamento dado','Em curso','Concluído','Cancelado'], j.estado)+`<option value="Concluído|Por pagar" ${j.estado==='Concluído'&&j.pagamento==='Por pagar'?'selected':''}>⏳ Concluído – cliente falta pagar</option>`}</select>
 ${blocoValor(j, false)}
     <label>Notas</label>
     <textarea id="f_notas">${esc(j.notas)}</textarea>
@@ -493,7 +495,7 @@ ${linha('Contribuinte', j.nif)}${linha('Morada', j.morada)}${linha('Telefone', j
 <div class="card">
 <h2 style="margin-top:4px">Fechar trabalho</h2>
 <label>Estado</label>
-<select id="f_estado" onchange="mostrarValor()">${opt(['Agendado','Orçamento dado','Em curso','Concluído'], j.estado)}</select>
+<select id="f_estado" onchange="mostrarValor()">${opt(['Agendado','Orçamento dado','Em curso','Concluído'], j.estado)+`<option value="Concluído|Por pagar" ${j.estado==='Concluído'&&j.pagamento==='Por pagar'?'selected':''}>⏳ Concluído – cliente falta pagar</option>`}</select>
 ${blocoValor(j, true)}
 <label>Notas</label>
     <textarea id="f_notas" placeholder="O que foi feito, observações…">${esc(j.notas)}</textarea>
@@ -524,13 +526,15 @@ verNif(true);
 }
 async function guardar(id){
 const g = k => { const e = $('#f_'+k); return e ? e.value : undefined; };
-const concl = g('estado') === 'Concluído';
-const d = { id, estado:g('estado'), notas:g('notas') };
+const _e = g('estado'), _pp = _e === 'Concluído|Por pagar';
+  const concl = _e === 'Concluído' || _pp;
+const d = { id, estado: _pp ? 'Concluído' : _e, notas:g('notas') };
 const orcs = ORCS.map(o=>({d:String(o.d||'').trim(), v:String(o.v||'').replace(',', '.').trim(), a:!!o.a})).filter(o=>o.d||o.v);
 if (orcs.some(o=>o.v==='' || isNaN(Number(o.v)))) return toast('Falta o valor (€) de um orçamento');
 if (d.estado === 'Orçamento dado' && !orcs.length) return toast('Coloque pelo menos um orçamento');
 d.orcamentos = orcs.map(o=>({d:o.d, v:Number(o.v), a:o.a}));
 if (concl){ d.valor = g('valor').replace(',', '.').trim(); d.pagamento = g('pagamento'); d.fatura = g('fatura'); }
+  if (_pp) d.pagamento = 'Por pagar';
 if (PAPEL === 'tecnico' && concl && d.fatura === 'Sim'){
 d.nif = g('nif').replace(/\D/g,''); d.nome = g('nome').trim();
 if (!nifValido(d.nif)) return toast('Contribuinte inválido — confirme os 9 dígitos');
