@@ -13,7 +13,7 @@ const ALARMES_MIN = [60, 15]; // avisos antes do trabalho (minutos)
 const FOLHA = 'Trabalhos';
 const COLS = ['id', 'data', 'hora', 'duracao', 'nome', 'nif', 'morada', 'telefone',
 'servico', 'tecnico', 'estado', 'valor', 'pagamento', 'notas',
-'eventoId', 'criado', 'atualizado', 'fatura', 'lembrado', 'iva', 'total', 'orcamento', 'fotos', 'pagoEm'];
+'eventoId', 'criado', 'atualizado', 'fatura', 'lembrado', 'iva', 'total', 'orcamento','fotos', 'pagoEm', 'origem'];
 const IVA_TAXA = 0.23;
 
 function doGet() {
@@ -80,7 +80,8 @@ function trabalhadores_() { return UTILIZADORES.filter(x => x.papel === 'tecnico
 function admins_() { return UTILIZADORES.filter(x => x.papel === 'admin').map(x => x.nome); }
 /* Um técnico só vê os trabalhos dele e os que ainda não têm técnico */
 function visiveis_(u, jobs) {
-return u.papel === 'admin' ? jobs : jobs.filter(j => !j.tecnico || tecs_(j.tecnico).includes(u.nome));
+// o técnico não vê de onde veio o trabalho (origem)
+  return u.papel === 'admin' ? jobs : jobs.filter(j => !j.tecnico || tecs_(j.tecnico).includes(u.nome)).map(j => { const o = Object.assign({}, j); delete o.origem; return o; });
 }
 
 /* ---------- folha ---------- */
@@ -157,7 +158,7 @@ if (papel === 'tecnico' && linha < 0) throw new Error('Só o dono pode criar tra
 let campos = papel === 'tecnico'
 ? ['estado', 'valor', 'pagamento', 'notas', 'fatura']
 : ['data', 'hora', 'duracao', 'nome', 'nif', 'morada', 'telefone', 'servico',
-        'tecnico', 'estado', 'valor', 'pagamento', 'notas', 'fatura', 'pagoEm'];
+'tecnico', 'estado', 'valor', 'pagamento', 'notas', 'fatura', 'pagoEm', 'origem'];
     if (papel === 'tecnico' && d.fatura === 'Sim') campos = campos.concat(['nif', 'nome']);
     // "Por pagar": só a Mariana ou o Alex (admin) marcam como pago
     if (papel === 'tecnico' && atual.pagamento === 'Por pagar' && d.pagamento !== undefined && d.pagamento !== 'Por pagar')

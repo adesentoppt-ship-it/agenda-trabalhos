@@ -254,7 +254,7 @@ const map = j.morada ? `<a target="_blank" href="https://www.google.com/maps/sea
 return `<div class="card job" onclick="editar('${j.id}')">
 <div class="top"><span class="h">${esc(j.hora)} · ${esc(dataPT(j.data))}</span><span class="tag ${esc(j.estado)}">${esc(j.estado)}</span></div>
 <div class="n">${esc(j.nome)}</div>
-<div class="m">${esc(j.servico||'')}${j.tecnico?' · 👷 '+esc(j.tecnico):''}</div>
+<div class="m">${esc(j.servico||'')}${j.tecnico?' · 👷 '+esc(j.tecnico):''}${PAPEL==='admin'&&j.origem?' · 📣 '+esc(j.origem):''}</div>
 ${j.morada?`<div class="m">${esc(j.morada)}</div>`:''}
 ${j.estado==='Concluído'&&j.valor!==''&&j.valor!=null?`<div class="m"><b style="color:var(--tx)">${eur(totalDe(j))}</b>${j.fatura==='Sim'?` <span style="font-size:12px">(${eur(j.valor)} + IVA ${eur(ivaDe(j))})</span> · 🧾 Fatura`:''}${j.pagamento&&j.pagamento!=='Por pagar'?'· '+esc(j.pagamento):''}</div>`:''}
 ${j.estado==='Orçamento dado'&&(j.orcamentos||[]).length?`<div class="m">💬 ${j.orcamentos.length>1?j.orcamentos.length+' orçamentos':'Orçamento'}: ${j.orcamentos.map(o=>`${o.d?esc(o.d)+' ':''}<b style="color:var(--tx)">${eur(o.v)}</b>`).join(' · ')}</div>`:''}
@@ -292,7 +292,7 @@ html += `<h2>Orçamentos dados</h2>` + (orc.length ? orc.map(cartao).join('') : 
 const ant = l.filter(j=>j.data<h).sort(ord).reverse();
 html += `<h2>Anteriores</h2>` + (ant.length ? ant.map(cartao).join('') : `<div class="card vazio">Sem trabalhos anteriores</div>`);
 }
-$('#lista').innerHTML = html + '<div style="text-align:center;font-size:11px;color:var(--mu);margin:18px 0 4px">versão 13 · 02/10</div>';
+$('#lista').innerHTML = html + '<div style="text-align:center;font-size:11px;color:var(--mu);margin:18px 0 4px">versão 14 · 02/10</div>';
 }
 
 /* ---------- formulário ---------- */
@@ -454,6 +454,8 @@ $('#app').innerHTML = `<div class="card">
 <div class="row"><div><label>Duração</label><select id="f_duracao">${[30,60,90,120,180,240].map(m=>`<option value="${m}" ${String(m)===String(j.duracao||60)?'selected':''}>${m<60?m+' min':(m/60)+' h'}</option>`).join('')}</select></div>
 <div><label>Técnico</label><select id="f_tecnico"><option value="">— Qualquer um —</option>${[...new Set(TRAB.concat(TRAB.length>1?[TRAB.join(' + ')]:[]).concat(j.tecnico?[j.tecnico]:[]))].map(n=>`<option ${n===j.tecnico?'selected':''}>${esc(n)}</option>`).join('')}</select></div></div>
 
+<label>📣 De onde veio o trabalho</label>
+<select id="f_origem"><option value="">—</option>${['Silva Desentupimentos','a.DesentopPT','Cartão','Dreno Desentope','Desentupimento de Esgoto PT','OLX'].concat(j.origem && !['Silva Desentupimentos','a.DesentopPT','Cartão','Dreno Desentope','Desentupimento de Esgoto PT','OLX'].includes(j.origem) ? [j.origem] : []).map(o=>`<option ${o===j.origem?'selected':''}>${esc(o)}</option>`).join('')}</select>
 <h2>Cliente</h2>
 <label>Contribuinte (NIF) <span style="font-size:12px">— só se quiser fatura</span></label>
 <input id="f_nif" inputmode="numeric" maxlength="9" value="${esc(j.nif)}" placeholder="9 dígitos" oninput="verNif()">
@@ -542,7 +544,7 @@ if (!nifValido(d.nif)) return toast('Contribuinte inválido — confirme os 9 d�
 if (!d.nome) return toast('Falta o nome completo para a fatura');
 }
 if (PAPEL === 'tecnico' && $('#f_tecnico')) d.tecnico = g('tecnico');
-  if (PAPEL !== 'tecnico') Object.assign(d, { data:g('data'), hora:g('hora'), duracao:g('duracao'), tecnico:g('tecnico'),
+if (PAPEL !== 'tecnico') Object.assign(d, { origem:g('origem'), data:g('data'), hora:g('hora'), duracao:g('duracao'), tecnico:g('tecnico'),
 nif:g('nif'), nome:g('nome'), morada:g('morada'), telefone:g('telefone'), servico:g('servico') });
 if (PAPEL !== 'tecnico'){
 if (!d.nome.trim()) return toast('Falta o nome do cliente');
@@ -589,6 +591,7 @@ $('#app').innerHTML = `
     ${(()=>{ const pr = JOBS.filter(j=>j.estado==='Concluído' && j.pagamento==='Por pagar');
       return pr.length ? `<h2 style="color:var(--av)">💶 Por receber (todos os meses)</h2><div class="card"><table>${pr.map(j=>`<tr><td>${j.data.slice(8)}/${j.data.slice(5,7)}</td><td>${esc(j.nome)}</td><td class="r">${eur(totalDe(j))}</td><td class="r"><button class="pagar" style="border:0;border-radius:7px;padding:6px 10px" onclick="marcarPago('${j.id}')">Pago</button></td></tr>`).join('')}</table></div>` : ''; })()}
     <h2>Por técnico <span style="text-transform:none;font-weight:400">(sem IVA)</span></h2><div class="card"><table>${agrupa('tecnico').map(([k,v])=>`<tr><td>${esc(k)}</td><td class="r">${eur(v)}</td></tr>`).join('')||'<tr><td class="vazio">—</td></tr>'}</table></div>
+<h2>📣 Por origem do trabalho <span style="text-transform:none;font-weight:400">(sem IVA)</span></h2><div class="card"><table>${agrupa('origem').map(([k,v])=>`<tr><td>${esc(k)}</td><td class="r">${js.filter(j=>(j.origem||'—')===k).length} trab.</td><td class="r">${eur(v)}</td></tr>`).join('')||'<tr><td class="vazio">—</td></tr>'}</table></div>
 <h2>Por forma de pagamento</h2><div class="card"><table>${agrupa('pagamento').map(([k,v])=>`<tr><td>${esc(k)}</td><td class="r">${eur(v)}</td></tr>`).join('')||'<tr><td class="vazio">—</td></tr>'}</table></div>
 <h2>Trabalhos do mês</h2><div class="card"><table><tr><th>Data</th><th>Cliente</th><th>Fatura / NIF</th><th class="r">Valor</th><th class="r">IVA</th></tr>
 ${js.sort((a,b)=>a.data.localeCompare(b.data)).map(j=>`<tr onclick="editar('${j.id}')"><td>${j.data.slice(8)}/${j.data.slice(5,7)}</td><td>${esc(j.nome)}</td><td>${j.fatura==='Sim'?'🧾 '+esc(j.nif):'—'}</td><td class="r">${j.valor===''?'<span class="bad">—</span>':eur(j.valor)}</td><td class="r">${ivaDe(j)?eur(ivaDe(j)):'—'}</td></tr>`).join('')}
