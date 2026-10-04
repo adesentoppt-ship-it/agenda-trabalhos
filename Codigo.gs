@@ -489,6 +489,17 @@ return finTudo_();
 }
 
 /* Liga a conclusão de um trabalho às finanças: cria/atualiza/remove o movimento "job-<id>" */
+/* ---------- TRABALHO REPASSADO: tira a comissão do técnico e divide o resto a meio ---------- */
+const COMISSAO_SRV = { 'Lucas': 0.10 };
+function pascoaSrv_(y) { const a=y%19,b=Math.floor(y/100),c=y%100,d=Math.floor(b/4),e=b%4,f=Math.floor((b+8)/25),g=Math.floor((b-f+1)/3),h=(19*a+b-d-g+15)%30,i=Math.floor(c/4),k=c%4,l=(32+2*e+2*i-h-k)%7,m=Math.floor((a+11*h+22*l)/451),mes=Math.floor((h+l-7*m+114)/31),dia=((h+l-7*m+114)%31)+1; return Date.UTC(y,mes-1,dia); }
+function feriadoSrv_(ds) { const y = +ds.slice(0,4), p = pascoaSrv_(y), f = n => new Date(p + n*864e5).toISOString().slice(0,10);
+  return ['01-01','04-25','05-01','06-10','08-15','10-05','11-01','12-01','12-08','12-25'].map(x => y+'-'+x).concat([f(-2), f(0), f(60)]).indexOf(ds) >= 0; }
+function foraHorasSrv_(t) { if (!t.data) return false; const dow = new Date(t.data+'T12:00:00Z').getUTCDay(); if (dow===0 || dow===6 || feriadoSrv_(t.data)) return true; const hh = parseInt(String(t.hora||'12'),10); return hh < 8 || hh >= 17; }
+function comissaoSrv_(t) { const tecs = tecs_(t.tecnico); let tot = 0;
+  Object.keys(COMISSAO_SRV).forEach(n => { if (tecs.indexOf(n) >= 0 && foraHorasSrv_(t)) tot += Math.max(0, (Number(t.valor)||0) - (Number(t.material)||0)) * COMISSAO_SRV[n]; });
+  return Math.round(tot*100)/100; }
+function parteEmpresa_(t) { const v = Number(t.valor) || 0; if (t.origem !== 'Trabalho repassado') return Math.round(v*100)/100; return Math.round((v - comissaoSrv_(t)) / 2 * 100) / 100; }
+
 function financaAutoMovimento_(t) {
 const deveExistir = t.estado === 'Concluído' && t.pagamento && t.pagamento !== 'Por pagar' && t.valor !== '' && Number(t.valor) > 0;
 const sh = folhaMov_();
@@ -503,7 +514,7 @@ if (antigo) { contaAjustar_(antigo.contaId, -Number(antigo.valor || 0)); sh.dele
 return;
 }
 const contaId = contaDoPagamento_(t.pagamento);
-const valor = r2(Number(t.valor));
+const valor = parteEmpresa_(t); // trabalho repassado: só a nossa parte
 const novo = { id: 'job-' + t.id, data: t.data, area: 'Serviço', tipo: 'Entrada', categoria: t.servico || 'Desentupimentos', descricao: t.nome, valor: String(valor), contaId: contaId, importado: 'false', origemJobId: t.id };
 if (antigo) {
 const valorAntigo = Number(antigo.valor || 0);

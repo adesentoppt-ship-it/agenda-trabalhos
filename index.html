@@ -254,7 +254,7 @@ const map = j.morada ? `<a target="_blank" href="https://www.google.com/maps/sea
 return `<div class="card job" onclick="editar('${j.id}')">
 <div class="top"><span class="h">${esc(j.hora)} · ${esc(dataPT(j.data))}</span><span class="tag ${esc(j.estado)}">${esc(j.estado)}</span></div>
 <div class="n">${esc(j.nome)}</div>
-<div class="m">${esc(j.servico||'')}${j.tecnico?' · 👷 '+esc(j.tecnico):''}${PAPEL==='admin'&&j.origem?' · 📣 '+esc(j.origem):''}</div>
+<div class="m">${esc(j.servico||'')}${j.tecnico?' · 👷 '+esc(j.tecnico):''}${PAPEL==='admin'&&j.origem?' · 📣 '+esc(j.origem):''}${PAPEL==='admin'&&entregarDe(j)?' · 🤝 entregar '+eur(entregarDe(j)):''}</div>
 ${j.morada?`<div class="m">${esc(j.morada)}</div>`:''}
 ${fechado(j)&&j.valor!==''&&j.valor!=null?`<div class="m"><b style="color:var(--tx)">${eur(totalDe(j))}</b>${j.fatura==='Sim'?` <span style="font-size:12px">(${eur(j.valor)} + IVA ${eur(ivaDe(j))})</span> · 🧾 Fatura`:''}${j.pagamento&&j.pagamento!=='Por pagar'?'· '+esc(j.pagamento):''}</div>`:''}
 ${j.estado==='Orçamento dado'&&(j.orcamentos||[]).length?`<div class="m">💬 ${j.orcamentos.length>1?j.orcamentos.length+' orçamentos':'Orçamento'}: ${j.orcamentos.map(o=>`${o.d?esc(o.d)+' ':''}<b style="color:var(--tx)">${eur(o.v)}</b>`).join(' · ')}</div>`:''}
@@ -295,7 +295,7 @@ html += `<h2>Orçamentos dados</h2>` + (orc.length ? orc.map(cartao).join('') : 
 const ant = l.filter(j=>j.data<h).sort(ord).reverse();
 html += `<h2>Anteriores</h2>` + (ant.length ? ant.map(cartao).join('') : `<div class="card vazio">Sem trabalhos anteriores</div>`);
 }
-$('#lista').innerHTML = html + '<div style="text-align:center;font-size:11px;color:var(--mu);margin:18px 0 4px">versão 16 · 04/10</div>';
+$('#lista').innerHTML = html + '<div style="text-align:center;font-size:11px;color:var(--mu);margin:18px 0 4px">versão 17 · 04/10</div>';
 }
 
 /* ---------- formulário ---------- */
@@ -582,6 +582,8 @@ function foraHoras(j){ if(!j.data) return false; const dow=new Date(j.data+'T12:
 function segunda(ds){ const d=new Date(ds+'T12:00:00Z'); d.setUTCDate(d.getUTCDate()-((d.getUTCDay()+6)%7)); return d.toISOString().slice(0,10); }
 function comissaoDe(j, nome){ const taxa=COMISSAO[nome]; if(!taxa || !fechado(j)) return 0; const tecs=String(j.tecnico||'').split(/\s*[+,]\s*/).filter(Boolean);
   if(!tecs.includes(nome) || !foraHoras(j)) return 0; const base=Math.max(0,(Number(j.valor)||0)-(Number(j.material)||0)); return r2(base*taxa); } /* a dois: o Lucas recebe sobre o valor todo */
+function comissaoTotal(j){ return Object.keys(COMISSAO).reduce((t,n)=>t+comissaoDe(j,n),0); }
+function entregarDe(j){ if (j.origem!=='Trabalho repassado' || !fechado(j)) return 0; return r2(((Number(j.valor)||0) - comissaoTotal(j))/2); }
 function segValores(){ return '<div class="seg" style="margin-bottom:10px">' + [['resumo','📊 Resumo'],['faturas','🧾 Faturas'],['comissoes','💼 Comissões']].map(([k,t])=>`<button class="${SUBV===k?'on':''}" onclick="SUBV='${k}';valores()">${t}</button>`).join('') + '</div>'; }
 function valores(){ if (SUBV==='faturas') return vFaturas(); if (SUBV==='comissoes') return vComissoes(); valoresResumo(); $('#app').insertAdjacentHTML('afterbegin', segValores()); }
 function vFaturas(){
@@ -624,19 +626,21 @@ const meses = [...new Set(JOBS.map(j=>j.data.slice(0,7)))].sort().reverse();
 const atual = window._mes || hoje().slice(0,7);
 if (!meses.includes(atual)) meses.unshift(atual);
 const js = JOBS.filter(j=>j.data.slice(0,7)===atual && fechado(j));
-const ganho = r2(js.reduce((s,j)=>s+(Number(j.valor)||0),0)); // o seu ganho (sem IVA)
+const ganho = r2(js.reduce((s,j)=>s+(Number(j.valor)||0),0));
+  const repasse = r2(js.reduce((s,j)=>s+entregarDe(j),0)); const meu = r2(ganho - repasse); // o seu ganho (sem IVA)
 const ivaTot = r2(js.reduce((s,j)=>s+ivaDe(j),0)); // IVA a entregar ao Estado
 const recebido = r2(ganho + ivaTot); // o que os clientes pagaram
 const porPagar = r2(js.filter(j=>j.pagamento==='Por pagar').reduce((s,j)=>s+totalDe(j),0));
 const semValor = js.filter(j=>j.valor==='').length;
 const comFat = r2(js.filter(j=>j.fatura==='Sim').reduce((s,j)=>s+(Number(j.valor)||0),0));
 const nOrc = JOBS.filter(j=>j.data.slice(0,7)===atual && j.estado==='Orçamento dado').length;
-const agrupa = k => { const m={}; js.forEach(j=>{ const c=j[k]||'—'; m[c]=(m[c]||0)+(Number(j.valor)||0); }); return Object.entries(m).sort((a,b)=>b[1]-a[1]); };
+const agrupa = k => { const m={}; js.forEach(j=>{ const c=j[k]||'—'; m[c]=(m[c]||0)+(Number(j.valor)||0)-entregarDe(j); }); return Object.entries(m).sort((a,b)=>b[1]-a[1]); };
 const nomeMes = m => { const [y,mm]=m.split('-'); return new Date(y,mm-1,1).toLocaleDateString('pt-PT',{month:'long',year:'numeric'}); };
 $('#app').innerHTML = `
 <select onchange="window._mes=this.value;valores()">${meses.map(m=>`<option value="${m}" ${m===atual?'selected':''}>${nomeMes(m)}</option>`).join('')}</select>
 <div class="kpis" style="margin-top:10px">
-<div class="card kpi"><div class="l">💶 O seu ganho (sem IVA)</div><div class="v" style="color:var(--ok)">${eur(ganho)}</div></div>
+<div class="card kpi"><div class="l">💶 O seu ganho (sem IVA)</div><div class="v" style="color:var(--ok)">${eur(meu)}</div></div>
+${repasse?`<div class="card kpi"><div class="l">🤝 A entregar (trabalhos repassados)</div><div class="v" style="color:var(--av)">${eur(repasse)}</div></div>`:''}
 <div class="card kpi"><div class="l">🏛️ IVA a entregar ao Estado</div><div class="v" style="color:var(--er)">${eur(ivaTot)}</div></div>
 <div class="card kpi"><div class="l">Recebido dos clientes (com IVA)</div><div class="v">${eur(recebido)}</div></div>
 <div class="card kpi"><div class="l">Por receber</div><div class="v" style="color:var(--av)">${eur(porPagar)}</div></div>
