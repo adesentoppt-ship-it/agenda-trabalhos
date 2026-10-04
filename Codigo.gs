@@ -496,7 +496,7 @@ function feriadoSrv_(ds) { const y = +ds.slice(0,4), p = pascoaSrv_(y), f = n =>
   return ['01-01','04-25','05-01','06-10','08-15','10-05','11-01','12-01','12-08','12-25'].map(x => y+'-'+x).concat([f(-2), f(0), f(60)]).indexOf(ds) >= 0; }
 function foraHorasSrv_(t) { if (!t.data) return false; const dow = new Date(t.data+'T12:00:00Z').getUTCDay(); if (dow===0 || dow===6 || feriadoSrv_(t.data)) return true; const hh = parseInt(String(t.hora||'12'),10); return hh < 8 || hh >= 17; }
 function comissaoSrv_(t) { const tecs = tecs_(t.tecnico); let tot = 0;
-  Object.keys(COMISSAO_SRV).forEach(n => { if (tecs.indexOf(n) >= 0 && foraHorasSrv_(t)) tot += Math.max(0, (Number(t.valor)||0) - (Number(t.material)||0)) * COMISSAO_SRV[n]; });
+  Object.keys(COMISSAO_SRV).forEach(n => { if (tecs.indexOf(n) >= 0 && foraHorasSrv_(t)) tot += Math.max(0, (Number(t.valor)||0) - (Number(t.material)||0)) * (t.estado === 'Orçamento recusado' ? 0.5 : COMISSAO_SRV[n]) /* taxa de deslocação: 50% */; });
   return Math.round(tot*100)/100; }
 function parteEmpresa_(t) { const v = Number(t.valor) || 0; if (t.origem !== 'Trabalho repassado') return Math.round(v*100)/100; return Math.round((v - comissaoSrv_(t)) / 2 * 100) / 100; }
 
@@ -690,7 +690,22 @@ function pagarComissao_(d, u) {
   } finally { lock.releaseLock(); }
 }
 /* ---------- LEMBRETE DE FATURAS: 24h depois de concluído, 1 vez por dia, até carregar em "Fatura feita" ---------- */
+/* ---------- SALÁRIOS: lembrete no dia do pagamento (e nos dias seguintes) até marcar como pago ---------- */
+const SALARIOS = [{ nome: 'Lucas', valor: 920, dia: 16 }];
+function lembrarSalario_() {
+  const tz = Session.getScriptTimeZone(), agora = new Date(), F = f => Utilities.formatDate(agora, tz, f);
+  const hh = Number(F('H')); if (hh < 9 || hh >= 21) return;
+  const props = PropertiesService.getScriptProperties();
+  SALARIOS.forEach(s => {
+    if (Number(F('d')) < s.dia) return;
+    const chave = F('yyyy-MM') + '-' + String(s.dia).padStart(2, '0');
+    if (comissoes_().some(c => c.semana === chave && c.tecnico === s.nome + ' (salário)')) return;
+    const k = 'sal_' + s.nome + '_' + F('yyyy-MM-dd'); if (props.getProperty(k)) return; props.setProperty(k, '1');
+    notificar_(admins_(), '💶 Pagar salário do ' + s.nome + ': ' + s.valor.toFixed(2).replace('.', ',') + ' €', 'Dia ' + s.dia + '. Depois de pagar, marque como pago na app (Valores → Comissões).');
+  });
+}
 function lembrarFaturas_() {
+  try { lembrarSalario_(); } catch (e) {}
   const tz = Session.getScriptTimeZone(), hoje = Utilities.formatDate(new Date(), tz, 'yyyy-MM-dd');
   const hh = Number(Utilities.formatDate(new Date(), tz, 'H')); if (hh < 9 || hh >= 21) return;
   const sh = folha_(); const n = sh.getLastRow() - 1; if (n < 1) return;

@@ -295,7 +295,7 @@ html += `<h2>Orçamentos dados</h2>` + (orc.length ? orc.map(cartao).join('') : 
 const ant = l.filter(j=>j.data<h).sort(ord).reverse();
 html += `<h2>Anteriores</h2>` + (ant.length ? ant.map(cartao).join('') : `<div class="card vazio">Sem trabalhos anteriores</div>`);
 }
-$('#lista').innerHTML = html + '<div style="text-align:center;font-size:11px;color:var(--mu);margin:18px 0 4px">versão 17 · 04/10</div>';
+$('#lista').innerHTML = html + '<div style="text-align:center;font-size:11px;color:var(--mu);margin:18px 0 4px">versão 18 · 04/10</div>';
 }
 
 /* ---------- formulário ---------- */
@@ -580,10 +580,21 @@ function feriado(ds){ const y=+ds.slice(0,4); if(!_FER[y]){ const p=pascoa(y), f
   _FER[y]=new Set(['01-01','04-25','05-01','06-10','08-15','10-05','11-01','12-01','12-08','12-25'].map(x=>y+'-'+x).concat([f(-2),f(0),f(60)])); } return _FER[y].has(ds); }
 function foraHoras(j){ if(!j.data) return false; const dow=new Date(j.data+'T12:00:00Z').getUTCDay(); if(dow===0||dow===6||feriado(j.data)) return true; const hh=parseInt(String(j.hora||'12'),10); return hh<8 || hh>=17; }
 function segunda(ds){ const d=new Date(ds+'T12:00:00Z'); d.setUTCDate(d.getUTCDate()-((d.getUTCDay()+6)%7)); return d.toISOString().slice(0,10); }
-function comissaoDe(j, nome){ const taxa=COMISSAO[nome]; if(!taxa || !fechado(j)) return 0; const tecs=String(j.tecnico||'').split(/\s*[+,]\s*/).filter(Boolean);
+function comissaoDe(j, nome){ const taxa = j.estado==='Orçamento recusado' ? (COMISSAO[nome] ? 0.5 : 0) : COMISSAO[nome]; if(!taxa || !fechado(j)) return 0; /* taxa de deslocação fora de horas: 50% */ const tecs=String(j.tecnico||'').split(/\s*[+,]\s*/).filter(Boolean);
   if(!tecs.includes(nome) || !foraHoras(j)) return 0; const base=Math.max(0,(Number(j.valor)||0)-(Number(j.material)||0)); return r2(base*taxa); } /* a dois: o Lucas recebe sobre o valor todo */
 function comissaoTotal(j){ return Object.keys(COMISSAO).reduce((t,n)=>t+comissaoDe(j,n),0); }
 function entregarDe(j){ if (j.origem!=='Trabalho repassado' || !fechado(j)) return 0; return r2(((Number(j.valor)||0) - comissaoTotal(j))/2); }
+const SALARIOS = [{ nome:'Lucas', valor:920, dia:16 }];
+function cartaoSalarios(){
+  const d = new Date(), y = d.getFullYear(), m = d.getMonth();
+  return SALARIOS.map(s => { let out = '';
+    [[y, m-1], [y, m]].forEach(([yy, mm]) => { const dt = new Date(yy, mm, s.dia); const chave = dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(s.dia).padStart(2,'0');
+      const pg = (COMS||[]).find(c=>c.semana===chave && c.tecnico===s.nome+' (salário)'); const atual = mm===m;
+      if (!pg && !atual && Date.now() < dt.getTime()) return; if (pg && !atual) return;
+      out += `<div class="card ${pg?'':'notif'}"><div style="display:flex;justify-content:space-between;gap:8px"><b>💶 Salário do ${esc(s.nome)} — dia ${s.dia}/${chave.slice(5,7)}</b><b>${eur(s.valor)}</b></div>` +
+        (pg ? `<div class="m" style="color:var(--ok);font-weight:600">✅ Pago em ${esc(pg.pagoEm)} (${esc(pg.pagoPor)})</div>` : `<div class="acts"><button class="pagar" onclick="pagarCom('${chave}','${s.nome} (salário)',${s.valor},0)">💶 Marcar salário como pago</button></div>`) + '</div>'; });
+    return out; }).join('');
+}
 function segValores(){ return '<div class="seg" style="margin-bottom:10px">' + [['resumo','📊 Resumo'],['faturas','🧾 Faturas'],['comissoes','💼 Comissões']].map(([k,t])=>`<button class="${SUBV===k?'on':''}" onclick="SUBV='${k}';valores()">${t}</button>`).join('') + '</div>'; }
 function valores(){ if (SUBV==='faturas') return vFaturas(); if (SUBV==='comissoes') return vComissoes(); valoresResumo(); $('#app').insertAdjacentHTML('afterbegin', segValores()); }
 function vFaturas(){
@@ -603,11 +614,11 @@ async function vComissoes(){
   $('#app').innerHTML = segValores() + '<div class="card vazio">A carregar…</div>';
   try { COMS = await call('comissoes', {}, true); } catch(e){ COMS = COMS || []; }
   if (TAB!=='valores' || SUBV!=='comissoes') return;
-  let html = segValores();
+  let html = segValores() + cartaoSalarios();
   Object.keys(COMISSAO).forEach(nome => {
     const sem = {}; JOBS.forEach(j=>{ const c=comissaoDe(j,nome); if(c>0){ const s=segunda(j.data); (sem[s]=sem[s]||[]).push([j,c]); } });
     const semanas = Object.keys(sem).sort().reverse();
-    html += `<h2>💼 Comissão do ${esc(nome)} (${Math.round(COMISSAO[nome]*100)}%)</h2><div class="hint" style="margin:-4px 4px 10px;color:var(--mu)">Só trabalhos depois das 17h, antes das 8h, sábados, domingos e feriados. Valor sem IVA menos o material. Trabalhos a dois contam o valor todo. Paga ao domingo (semana de segunda a domingo).</div>`;
+    html += `<h2>💼 Comissão do ${esc(nome)} (${Math.round(COMISSAO[nome]*100)}%)</h2><div class="hint" style="margin:-4px 4px 10px;color:var(--mu)">Só trabalhos depois das 17h, antes das 8h, sábados, domingos e feriados. Valor sem IVA menos o material. Trabalhos a dois contam o valor todo. Taxa de deslocação (orçamento recusado): 50% da taxa. Paga ao domingo (semana de segunda a domingo).</div>`;
     if (!semanas.length) html += '<div class="card vazio">Ainda sem comissões</div>';
     semanas.forEach(s => {
       const itens = sem[s], tot = r2(itens.reduce((t,x)=>t+x[1],0)), fim = new Date(Date.parse(s+'T12:00:00Z')+6*864e5).toISOString().slice(0,10);
