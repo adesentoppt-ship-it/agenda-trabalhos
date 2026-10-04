@@ -50,6 +50,7 @@ case 'guardar': return visiveis_(u, guardar_(dados, u));
     case 'verfoto': return verFoto_(dados, u);
     case 'apagarfoto': return visiveis_(u, apagarFoto_(dados, u));
 case 'comissoes': return papel === 'admin' ? comissoes_() : comissoes_().filter(c => c.tecnico === u.nome || c.tecnico === u.nome + ' (salário)');
+case 'contas': if (papel !== 'admin') throw new Error('Sem acesso'); return contasPagamento_();
     case 'faltas': return faltas_(u);
     case 'guardarfalta': if (papel !== 'admin') throw new Error('Sem acesso'); return guardarFalta_(dados, u);
     case 'apagarfalta': if (papel !== 'admin') throw new Error('Sem acesso'); return apagarFalta_(dados, u);
@@ -691,7 +692,8 @@ function pagarComissao_(d, u) {
 let feito = false;
     for (let i = 1; i < vals.length; i++) if (vals[i][0] === sem && vals[i][1] === row[1]) { sh.getRange(i + 1, 1, 1, 6).setValues([row]); feito = true; break; }
     if (!feito) sh.appendRow(row);
-    if (/ \(salário\)$/.test(row[1])) marcarFaltas_(row[1].replace(' (salário)', ''), sem);
+if (/ \(salário\)$/.test(row[1])) marcarFaltas_(row[1].replace(' (salário)', ''), sem);
+    if (d.contaId) pagamentoMov_(sem, row[1], Number(row[2]), String(d.contaId));
     return comissoes_();
   } finally { lock.releaseLock(); }
 }
@@ -731,6 +733,24 @@ function apagarFalta_(d, u) {
 function marcarFaltas_(nome, chave) {
   const sh = folhaFaltas_(); const v = sh.getDataRange().getDisplayValues();
   for (let i = 1; i < v.length; i++) if (v[i][2] === nome && !v[i][8] && v[i][1] <= chave) sh.getRange(i + 1, 9).setValue(chave);
+}
+/* ---------- PAGAMENTO DE COMISSÕES/SALÁRIOS: sai da conta escolhida (Finanças) ---------- */
+function contasPagamento_() {
+  const sh = folhaContas_(); const n = sh.getLastRow() - 1; if (n < 1) return [];
+  const iId = COLS_CONTAS.indexOf('id'), iNome = COLS_CONTAS.indexOf('nome'), iMoeda = COLS_CONTAS.indexOf('moeda');
+  return sh.getRange(2, 1, n, COLS_CONTAS.length).getDisplayValues().filter(r => r[iId] && String(r[iMoeda] || 'EUR').toUpperCase() !== 'BRL').map(r => ({ id: r[iId], nome: r[iNome] }));
+}
+function pagamentoMov_(sem, tecnico, valor, contaId) {
+  const sh = folhaMov_(); const id = 'pag-' + sem + '-' + tecnico.replace(/[^A-Za-z0-9]+/g, '');
+  const linha = movLinhaDe_(sh, id);
+  if (linha > 0) { const r = sh.getRange(linha, 1, 1, COLS_MOV.length).getDisplayValues()[0]; const o = {}; COLS_MOV.forEach((c, i) => o[c] = r[i]); contaAjustar_(o.contaId, Number(String(o.valor).replace(',', '.')) || 0); sh.deleteRow(linha); }
+  if (!contaId || !(valor > 0)) return;
+  const sal = / \(salário\)$/.test(tecnico), nome = tecnico.replace(' (salário)', '');
+  const row = { id: id, data: Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd'), area: 'Serviço', tipo: 'Saída', categoria: sal ? 'Salários' : 'Comissões',
+    descricao: sal ? 'Salário ' + nome + ' ' + sem.slice(5, 7) + '/' + sem.slice(0, 4) : 'Comissão ' + nome + ' semana ' + sem.slice(8) + '/' + sem.slice(5, 7),
+    valor: String(Math.round(valor * 100) / 100), contaId: contaId, importado: 'false', origemJobId: '' };
+  sh.appendRow(COLS_MOV.map(c => row[c]));
+  contaAjustar_(contaId, -Number(row.valor));
 }
 function descontoPendente_(nome, chave) { return faltasTodas_().filter(f => f.tecnico === nome && !f.salario && f.data <= chave).reduce((t, f) => t + f.desconto, 0); }
 

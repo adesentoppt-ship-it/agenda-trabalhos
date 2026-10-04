@@ -295,7 +295,7 @@ html += `<h2>Orçamentos dados</h2>` + (orc.length ? orc.map(cartao).join('') : 
 const ant = l.filter(j=>j.data<h).sort(ord).reverse();
 html += `<h2>Anteriores</h2>` + (ant.length ? ant.map(cartao).join('') : `<div class="card vazio">Sem trabalhos anteriores</div>`);
 }
-$('#lista').innerHTML = html + '<div style="text-align:center;font-size:11px;color:var(--mu);margin:18px 0 4px">versão 19 · 04/10</div>';
+$('#lista').innerHTML = html + '<div style="text-align:center;font-size:11px;color:var(--mu);margin:18px 0 4px">versão 20 · 04/10</div>';
 }
 
 /* ---------- formulário ---------- */
@@ -584,7 +584,7 @@ function comissaoDe(j, nome){ const taxa = j.estado==='Orçamento recusado' ? (C
   if(!tecs.includes(nome) || !foraHoras(j)) return 0; const base=Math.max(0,(Number(j.valor)||0)-(Number(j.material)||0)); return r2(base*taxa); } /* a dois: o Lucas recebe sobre o valor todo */
 function comissaoTotal(j){ return Object.keys(COMISSAO).reduce((t,n)=>t+comissaoDe(j,n),0); }
 function entregarDe(j){ if (j.origem!=='Trabalho repassado' || !fechado(j)) return 0; return r2(((Number(j.valor)||0) - comissaoTotal(j))/2); }
-const SALARIOS = [{ nome:'Lucas', valor:920, dia:16 }];
+const SALARIOS = [{ nome:'Lucas', valor:920, dia:16, desde:'2026-10' }];
 const HORAS_SEMANA = 40; /* segunda a sexta, 8h por dia */
 const TIPOS_FALTA = { 'Injustificada': true, 'Justificada sem pagamento': true, 'Justificada paga': false };
 let FALTAS = [];
@@ -596,7 +596,7 @@ function cartaoSalarios(){
   return SALARIOS.filter(s=>ADM || s.nome===NOME).map(s => { let out = '';
     [[y, m-1], [y, m]].forEach(([yy, mm]) => { const dt = new Date(yy, mm, s.dia); const chave = dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(s.dia).padStart(2,'0');
       const pg = (COMS||[]).find(c=>c.semana===chave && c.tecnico===s.nome+' (salário)'); const atual = mm===m;
-      if (!pg && !atual && Date.now() < dt.getTime()) return; if (pg && !atual) return;
+if (chave.slice(0,7) < (s.desde||'')) return; if (!pg && !atual && Date.now() < dt.getTime()) return; if (pg && !atual) return;
       const fs = (FALTAS||[]).filter(f=>f.tecnico===s.nome && (pg ? f.salario===chave : (!f.salario && f.data<=chave))).sort((a,b)=>a.data.localeCompare(b.data));
       const desc = r2(fs.reduce((t,f)=>t+f.desconto,0)), liq = r2(s.valor-desc);
       out += `<div class="card ${pg?'':'notif'}"><div style="display:flex;justify-content:space-between;gap:8px"><b>💶 Salário do ${esc(s.nome)} — dia ${s.dia}/${chave.slice(5,7)}</b><b>${eur(pg?pg.valor:liq)}</b></div>`
@@ -663,7 +663,18 @@ let html = SEG + cartaoSalarios();
   });
   $('#app').innerHTML = html;
 }
-async function pagarCom(s, nome, valor, n){ if (!confirm('Confirmar que pagou ' + eur(valor) + ' ao ' + nome + '?')) return; COMS = await call('pagarcomissao', { semana: s, tecnico: nome, valor, trabalhos: n }); toast('✅ Comissão marcada como paga'); vComissoes(); }
+async function pagarCom(s, nome, valor, n){
+  let contas = []; try { contas = await call('contas', {}, true) || []; } catch(e){}
+  const fundo = document.createElement('div');
+  fundo.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
+  fundo.innerHTML = `<div class="card" style="max-width:380px;width:100%;margin:0"><b>💶 Pagar ${eur(valor)} ao ${esc(nome)}</b><label>De que conta sai o dinheiro?</label><select id="pc_conta">${contas.map(c=>`<option value="${esc(c.id)}">${esc(c.nome)}</option>`).join('')}<option value="">Não descontar em nenhuma conta</option></select><div class="acts"><button id="pc_ok" class="pagar">✅ Confirmar pagamento</button><button id="pc_no">Cancelar</button></div></div>`;
+  document.body.appendChild(fundo);
+  const contaId = await new Promise(ok => { fundo.querySelector('#pc_ok').onclick = () => ok(fundo.querySelector('#pc_conta').value); fundo.querySelector('#pc_no').onclick = () => ok(null); });
+  fundo.remove(); if (contaId === null) return;
+  try { COMS = await call('pagarcomissao', { semana: s, tecnico: nome, valor, trabalhos: n, contaId }); toast('✅ Marcado como pago' + (contaId ? ' e descontado da conta' : '')); } catch(e){}
+  vComissoes();
+}
+
 function valoresResumo(){
 const meses = [...new Set(JOBS.map(j=>j.data.slice(0,7)))].sort().reverse();
 const atual = window._mes || hoje().slice(0,7);
