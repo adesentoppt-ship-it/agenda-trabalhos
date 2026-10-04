@@ -581,7 +581,7 @@ function feriado(ds){ const y=+ds.slice(0,4); if(!_FER[y]){ const p=pascoa(y), f
 function foraHoras(j){ if(!j.data) return false; const dow=new Date(j.data+'T12:00:00Z').getUTCDay(); if(dow===0||dow===6||feriado(j.data)) return true; const hh=parseInt(String(j.hora||'12'),10); return hh<8 || hh>=17; }
 function segunda(ds){ const d=new Date(ds+'T12:00:00Z'); d.setUTCDate(d.getUTCDate()-((d.getUTCDay()+6)%7)); return d.toISOString().slice(0,10); }
 function comissaoDe(j, nome){ const taxa=COMISSAO[nome]; if(!taxa || !fechado(j)) return 0; const tecs=String(j.tecnico||'').split(/\s*[+,]\s*/).filter(Boolean);
-  if(!tecs.includes(nome) || !foraHoras(j)) return 0; const base=Math.max(0,(Number(j.valor)||0)-(Number(j.material)||0)); return r2(base*taxa); // a dois: o Lucas recebe sobre o valor todo }
+  if(!tecs.includes(nome) || !foraHoras(j)) return 0; const base=Math.max(0,(Number(j.valor)||0)-(Number(j.material)||0)); return r2(base*taxa); } /* a dois: o Lucas recebe sobre o valor todo */
 function segValores(){ return '<div class="seg" style="margin-bottom:10px">' + [['resumo','📊 Resumo'],['faturas','🧾 Faturas'],['comissoes','💼 Comissões']].map(([k,t])=>`<button class="${SUBV===k?'on':''}" onclick="SUBV='${k}';valores()">${t}</button>`).join('') + '</div>'; }
 function valores(){ if (SUBV==='faturas') return vFaturas(); if (SUBV==='comissoes') return vComissoes(); valoresResumo(); $('#app').insertAdjacentHTML('afterbegin', segValores()); }
 function vFaturas(){
