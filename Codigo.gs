@@ -719,15 +719,19 @@ function valorHora_(nome) { const s = SALARIOS.find(x => x.nome === nome); retur
 function guardarFalta_(d, u) {
   const data = String(d.data || ''); if (!/^\d{4}-\d{2}-\d{2}$/.test(data)) throw new Error('Data inválida');
   const tec = String(d.tecnico || ''); if (!SALARIOS.some(s => s.nome === tec)) throw new Error('Técnico inválido');
-  const tipo = String(d.tipo || ''); if (!(tipo in TIPOS_FALTA)) throw new Error('Tipo de falta inválido');
-  const horas = Number(d.horas); if (!(horas > 0 && horas <= 248)) throw new Error('Horas inválidas');
-  const desc = TIPOS_FALTA[tipo] ? Math.round(horas * valorHora_(tec) * 100) / 100 : 0;
-  folhaFaltas_().appendRow([Utilities.getUuid().slice(0, 8), data, tec, tipo, String(horas), String(desc), String(d.notas || '').slice(0, 300), u.nome, '']);
+  const tipo = String(d.tipo || ''); const vale = tipo === 'Vale';
+  if (!vale && !(tipo in TIPOS_FALTA)) throw new Error('Tipo de falta inválido');
+  const horas = vale ? 0 : Number(d.horas); if (!vale && !(horas > 0 && horas <= 248)) throw new Error('Horas inválidas');
+  const desc = vale ? Math.round((Number(String(d.valor).replace(',', '.')) || 0) * 100) / 100 : (TIPOS_FALTA[tipo] ? Math.round(horas * valorHora_(tec) * 100) / 100 : 0);
+  if (vale && !(desc > 0 && desc <= 5000)) throw new Error('Valor do vale inválido');
+  const id = Utilities.getUuid().slice(0, 8);
+  folhaFaltas_().appendRow([id, data, tec, tipo, String(horas), String(desc), String(d.notas || '').slice(0, 300), u.nome, '']);
+  if (vale && d.contaId) valeMov_(id, data, tec, desc, String(d.contaId));
   return faltas_(u);
 }
 function apagarFalta_(d, u) {
   const sh = folhaFaltas_(); const v = sh.getDataRange().getDisplayValues();
-  for (let i = v.length - 1; i >= 1; i--) if (v[i][0] === String(d.id)) { if (v[i][8]) throw new Error('Esta falta já foi descontada num salário pago'); sh.deleteRow(i + 1); break; }
+  for (let i = v.length - 1; i >= 1; i--) if (v[i][0] === String(d.id)) {if (v[i][8]) throw new Error('Já foi descontado num salário pago'); valeMov_(String(d.id), '', '', 0, ''); sh.deleteRow(i + 1); break; }
   return faltas_(u);
 }
 function marcarFaltas_(nome, chave) {
@@ -751,6 +755,15 @@ function pagamentoMov_(sem, tecnico, valor, contaId) {
     valor: String(Math.round(valor * 100) / 100), contaId: contaId, importado: 'false', origemJobId: '' };
   sh.appendRow(COLS_MOV.map(c => row[c]));
   contaAjustar_(contaId, -Number(row.valor));
+}
+/* ---------- VALE (adiantamento): sai da conta escolhida e é descontado no próximo salário ---------- */
+function valeMov_(id, data, tec, valor, contaId) {
+  const sh = folhaMov_(); const mid = 'vale-' + id; const linha = movLinhaDe_(sh, mid);
+  if (linha > 0) { const r = sh.getRange(linha, 1, 1, COLS_MOV.length).getDisplayValues()[0]; const o = {}; COLS_MOV.forEach((c, i) => o[c] = r[i]); contaAjustar_(o.contaId, Number(String(o.valor).replace(',', '.')) || 0); sh.deleteRow(linha); }
+  if (!contaId || !(valor > 0)) return;
+  const row = { id: mid, data: data, area: 'Serviço', tipo: 'Saída', categoria: 'Salários', descricao: 'Vale (adiantamento) ' + tec, valor: String(valor), contaId: contaId, importado: 'false', origemJobId: '' };
+  sh.appendRow(COLS_MOV.map(c => row[c]));
+  contaAjustar_(contaId, -valor);
 }
 function descontoPendente_(nome, chave) { return faltasTodas_().filter(f => f.tecnico === nome && !f.salario && f.data <= chave).reduce((t, f) => t + f.desconto, 0); }
 

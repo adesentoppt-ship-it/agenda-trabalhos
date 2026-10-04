@@ -295,7 +295,7 @@ html += `<h2>Orçamentos dados</h2>` + (orc.length ? orc.map(cartao).join('') : 
 const ant = l.filter(j=>j.data<h).sort(ord).reverse();
 html += `<h2>Anteriores</h2>` + (ant.length ? ant.map(cartao).join('') : `<div class="card vazio">Sem trabalhos anteriores</div>`);
 }
-$('#lista').innerHTML = html + '<div style="text-align:center;font-size:11px;color:var(--mu);margin:18px 0 4px">versão 20 · 04/10</div>';
+$('#lista').innerHTML = html + '<div style="text-align:center;font-size:11px;color:var(--mu);margin:18px 0 4px">versão 21 · 04/10</div>';
 }
 
 /* ---------- formulário ---------- */
@@ -589,7 +589,7 @@ const HORAS_SEMANA = 40; /* segunda a sexta, 8h por dia */
 const TIPOS_FALTA = { 'Injustificada': true, 'Justificada sem pagamento': true, 'Justificada paga': false };
 let FALTAS = [];
 function valorHora(nome){ const s = SALARIOS.find(x=>x.nome===nome); return s ? s.valor*12/(52*HORAS_SEMANA) : 0; }
-function linhaFalta(f, podeApagar){ return `<tr><td>${esc(f.data.slice(8))}/${esc(f.data.slice(5,7))}</td><td>${esc(f.tipo)} · ${String(f.horas).replace('.',',')}h${f.notas?' · '+esc(f.notas):''}</td><td class="r">${f.desconto?'− '+eur(f.desconto):'—'}</td>${podeApagar?`<td class="r"><button style="padding:2px 8px" onclick="apagarFalta('${esc(f.id)}')">🗑</button></td>`:''}</tr>`; }
+function linhaFalta(f, podeApagar){ return `<tr><td>${esc(f.data.slice(8))}/${esc(f.data.slice(5,7))}</td><td>${f.tipo==='Vale' ? '💵 Vale (adiantamento)' : esc(f.tipo)+' · '+String(f.horas).replace('.',',')+'h'}${f.notas?' · '+esc(f.notas):''}</td><td class="r">${f.desconto?'− '+eur(f.desconto):'—'}</td>${podeApagar?`<td class="r"><button style="padding:2px 8px" onclick="apagarFalta('${esc(f.id)}')">🗑</button></td>`:''}</tr>`; }
 function cartaoSalarios(){
   const ADM = PAPEL!=='tecnico';
   const d = new Date(), y = d.getFullYear(), m = d.getMonth();
@@ -600,7 +600,7 @@ if (chave.slice(0,7) < (s.desde||'')) return; if (!pg && !atual && Date.now() < 
       const fs = (FALTAS||[]).filter(f=>f.tecnico===s.nome && (pg ? f.salario===chave : (!f.salario && f.data<=chave))).sort((a,b)=>a.data.localeCompare(b.data));
       const desc = r2(fs.reduce((t,f)=>t+f.desconto,0)), liq = r2(s.valor-desc);
       out += `<div class="card ${pg?'':'notif'}"><div style="display:flex;justify-content:space-between;gap:8px"><b>💶 Salário do ${esc(s.nome)} — dia ${s.dia}/${chave.slice(5,7)}</b><b>${eur(pg?pg.valor:liq)}</b></div>`
-        + (fs.length ? `<div class="m">Salário ${eur(s.valor)} · faltas − ${eur(desc)}</div><table style="margin-top:6px">${fs.map(f=>linhaFalta(f, ADM && !pg)).join('')}</table>` : `<div class="m">Sem faltas${pg?'':' a descontar'}</div>`)
+        + (fs.length ? `<div class="m">Salário ${eur(s.valor)} · faltas e vales − ${eur(desc)}</div><table style="margin-top:6px">${fs.map(f=>linhaFalta(f, ADM && !pg)).join('')}</table>` : `<div class="m">Sem faltas nem vales${pg?'':' a descontar'}</div>`)
         + (pg ? `<div class="m" style="color:var(--ok);font-weight:600">✅ Pago ${eur(pg.valor)} em ${esc(pg.pagoEm)} (${esc(pg.pagoPor)})</div>`
               : ADM ? `<div class="acts"><button class="pagar" onclick="pagarCom('${chave}','${s.nome} (salário)',${liq},${fs.length})">💶 Marcar salário como pago</button></div>` : '<div class="m" style="color:var(--mu)">⏳ Por pagar</div>')
         + '</div>'; });
@@ -612,7 +612,13 @@ if (chave.slice(0,7) < (s.desde||'')) return; if (!pg && !atual && Date.now() < 
       <label>Nº de dias seguidos</label><input type="number" id="fa_dias" value="1" min="1" max="31" inputmode="numeric">
       <label>Notas</label><input id="fa_notas" placeholder="Opcional">
       <div class="hint" style="color:var(--mu);margin-top:6px">Desconto: ${eur(vh)}/hora · ${eur(vh*4)} meio dia · ${eur(vh*8)} dia inteiro (salário × 12 ÷ 52 semanas ÷ ${HORAS_SEMANA}h). "Justificada paga" não desconta. É descontada no próximo salário.</div>
-      <div class="acts"><button class="pagar" onclick="guardarFalta('${s.nome}')">Guardar falta</button></div></div>`;
+<div class="acts"><button class="pagar" onclick="guardarFalta('${s.nome}')">Guardar falta</button></div></div>`;
+    if (ADM) out += `<div class="card"><b>💵 Registar vale (adiantamento) do ${esc(s.nome)}</b>
+      <label>Data</label><input type="date" id="va_data" value="${new Date().toLocaleDateString('sv')}">
+      <label>Valor (€)</label><input type="number" id="va_valor" step="0.01" min="0" inputmode="decimal" placeholder="ex.: 100">
+      <label>Notas</label><input id="va_notas" placeholder="Opcional">
+      <div class="hint" style="color:var(--mu);margin-top:6px">O vale é descontado no próximo salário.</div>
+      <div class="acts"><button class="pagar" onclick="guardarVale('${s.nome}')">Guardar vale</button></div></div>`;
     else out += `<div class="hint" style="margin:-4px 4px 10px;color:var(--mu)">Falta injustificada ou sem pagamento: desconto de ${eur(vh*8)} por dia (${eur(vh)}/hora).</div>`;
     return out; }).join('');
 }
@@ -625,7 +631,23 @@ async function guardarFalta(nome){
   try { FALTAS = await call('guardarfalta', { data, tecnico: nome, tipo, horas, notas: $('#fa_notas').value }); toast('✅ Falta registada'); } catch(e){}
   vComissoes();
 }
-async function apagarFalta(id){ if (!confirm('Apagar esta falta?')) return; try { FALTAS = await call('apagarfalta', { id }); toast('Falta apagada'); } catch(e){} vComissoes(); }
+function escolherConta(titulo){ return new Promise(async ok => {
+  let contas = []; try { contas = await call('contas', {}, true) || []; } catch(e){}
+  const fundo = document.createElement('div');
+  fundo.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
+  fundo.innerHTML = `<div class="card" style="max-width:380px;width:100%;margin:0"><b>${titulo}</b><label>De que conta sai o dinheiro?</label><select id="ec_conta">${contas.map(c=>`<option value="${esc(c.id)}">${esc(c.nome)}</option>`).join('')}<option value="">Não descontar em nenhuma conta (já registado)</option></select><div class="acts"><button id="ec_ok" class="pagar">✅ Confirmar</button><button id="ec_no">Cancelar</button></div></div>`;
+  document.body.appendChild(fundo);
+  fundo.querySelector('#ec_ok').onclick = () => { const v = fundo.querySelector('#ec_conta').value; fundo.remove(); ok(v); };
+  fundo.querySelector('#ec_no').onclick = () => { fundo.remove(); ok(null); };
+}); }
+async function guardarVale(nome){
+  const valor = r2(String($('#va_valor').value).replace(',','.')), data = $('#va_data').value, notas = $('#va_notas').value;
+  if (!data) return alert('Escolha a data'); if (!(valor > 0)) return alert('Escreva o valor do vale');
+  const contaId = await escolherConta('💵 Vale de ' + eur(valor) + ' ao ' + esc(nome)); if (contaId === null) return;
+  try { FALTAS = await call('guardarfalta', { data, tecnico: nome, tipo: 'Vale', valor, contaId, notas }); toast('✅ Vale registado'); } catch(e){}
+  vComissoes();
+}
+async function apagarFalta(id){ if (!confirm('Apagar este registo?')) return; try { FALTAS = await call('apagarfalta', { id }); toast('Falta apagada'); } catch(e){} vComissoes(); }
 function segValores(){ return '<div class="seg" style="margin-bottom:10px">' + [['resumo','📊 Resumo'],['faturas','🧾 Faturas'],['comissoes','💼 Comissões']].map(([k,t])=>`<button class="${SUBV===k?'on':''}" onclick="SUBV='${k}';valores()">${t}</button>`).join('') + '</div>'; }
 function valores(){ if (PAPEL==='tecnico') { SUBV='comissoes'; return vComissoes(); } if (SUBV==='faturas') return vFaturas(); if (SUBV==='comissoes') return vComissoes(); valoresResumo(); $('#app').insertAdjacentHTML('afterbegin', segValores()); }
 function vFaturas(){
