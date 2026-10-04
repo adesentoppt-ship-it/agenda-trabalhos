@@ -418,6 +418,7 @@ return -1;
 }
 function contaAjustar_(contaId, delta) {
 if (!contaId || !delta) return;
+  try { atualizarCdi_(); } catch (e) {}
 const sh = folhaContas_();
 const linha = contaLinhaDe_(sh, contaId);
 if (linha < 0) return;
@@ -429,7 +430,31 @@ sh.getRange(linha, atualCol).setValue(hojeS);
 sh.getRange(linha, saldoDataCol).setValue(hojeS);
 }
 
+/* ---------- CDI: a conta rende sozinha em cada dia útil do Brasil (taxa anual em Finanças → CDI) ---------- */
+/* saldoData = dia em que o saldo foi visto; o rendimento de cada dia útil entra no dia seguinte */
+function diaUtilBr_(ds) {
+  const dow = new Date(ds + 'T12:00:00Z').getUTCDay(); if (dow === 0 || dow === 6) return false;
+  const y = +ds.slice(0, 4), p = pascoaSrv_(y), f = n => new Date(p + n * 864e5).toISOString().slice(0, 10);
+  return ['01-01', '04-21', '05-01', '09-07', '10-12', '11-02', '11-15', '11-20', '12-25'].map(x => y + '-' + x).concat([f(-48), f(-47), f(-2), f(60)]).indexOf(ds) < 0;
+}
+function atualizarCdi_() {
+  const cfg = lerCfg_('cdi'); const taxa = Number(cfg && cfg.taxaAnual) || 0; if (!taxa) return;
+  const hoje = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd');
+  const sh = folhaContas_(); const n = sh.getLastRow() - 1; if (n < 1) return;
+  const iS = COLS_CONTAS.indexOf('saldo'), iC = COLS_CONTAS.indexOf('cdi'), iD = COLS_CONTAS.indexOf('saldoData'), iA = COLS_CONTAS.indexOf('atualizado');
+  const raw = sh.getRange(2, 1, n, COLS_CONTAS.length).getValues(), disp = sh.getRange(2, 1, n, COLS_CONTAS.length).getDisplayValues();
+  for (let k = 0; k < n; k++) {
+    const pct = Number(String(disp[k][iC]).replace(',', '.')) || 0, desde = String(disp[k][iD] || '').slice(0, 10);
+    if (!pct || !/^\d{4}-\d{2}-\d{2}$/.test(desde) || desde >= hoje) continue;
+    let dias = 0; for (let t = Date.parse(desde + 'T12:00:00Z'); new Date(t).toISOString().slice(0, 10) < hoje; t += 864e5) if (diaUtilBr_(new Date(t).toISOString().slice(0, 10))) dias++;
+    const saldo = Number(raw[k][iS]) || 0;
+    const fator = Math.pow(1 + (Math.pow(1 + taxa / 100, 1 / 252) - 1) * pct / 100, dias);
+    if (dias) sh.getRange(k + 2, iS + 1).setValue(Math.round(saldo * fator * 100) / 100);
+    sh.getRange(k + 2, iD + 1).setValue(hoje); sh.getRange(k + 2, iA + 1).setValue(hoje);
+  }
+}
 function finTudo_() {
+  try { atualizarCdi_(); } catch (e) {}
 return { contas: listarContas_(), bens: listarBens_(), movimentos: listarMov_(), cambio: lerCfg_('cambio'), cdi: lerCfg_('cdi') };
 }
 function finContaSaldo_(d) {
@@ -780,7 +805,8 @@ function lembrarSalario_() {
   });
 }
 function lembrarFaturas_() {
-  try { lembrarSalario_(); } catch (e) {}
+try { lembrarSalario_(); } catch (e) {}
+  try { atualizarCdi_(); } catch (e) {}
   const tz = Session.getScriptTimeZone(), hoje = Utilities.formatDate(new Date(), tz, 'yyyy-MM-dd');
   const hh = Number(Utilities.formatDate(new Date(), tz, 'H')); if (hh < 9 || hh >= 21) return;
   const sh = folha_(); const n = sh.getLastRow() - 1; if (n < 1) return;

@@ -295,7 +295,7 @@ html += `<h2>Orçamentos dados</h2>` + (orc.length ? orc.map(cartao).join('') : 
 const ant = l.filter(j=>j.data<h).sort(ord).reverse();
 html += `<h2>Anteriores</h2>` + (ant.length ? ant.map(cartao).join('') : `<div class="card vazio">Sem trabalhos anteriores</div>`);
 }
-$('#lista').innerHTML = html + '<div style="text-align:center;font-size:11px;color:var(--mu);margin:18px 0 4px">versão 21 · 04/10</div>';
+$('#lista').innerHTML = html + '<div style="text-align:center;font-size:11px;color:var(--mu);margin:18px 0 4px">versão 22 · 04/10</div>';
 }
 
 /* ---------- formulário ---------- */
@@ -761,6 +761,29 @@ $('#app').innerHTML = `<div class="card vazio">A carregar finanças…</div>`;
 try { FIN = await call('fin_tudo'); } catch(e){ return; }
 renderFinancas();
 }
+/* ---------- RESUMO: total em euros + lucro da semana e do mês ---------- */
+/* lucro = entradas − saídas − salário do Lucas (reservado: 920 €/mês, 212 €/semana). Meta de lucro: 1000 €/mês */
+const META_LUCRO_MES = 1000;
+function cartaoLucro(){
+  const contas = (FIN.contas||[]).filter(c=>String(c.moeda||'EUR').toUpperCase()!=='BRL');
+  const ids = new Set(contas.map(c=>c.id)), total = r2(contas.reduce((t,c)=>t+(Number(c.saldo)||0),0));
+  const salMes = SALARIOS.reduce((t,s)=>t+s.valor,0);
+  const hoje = new Date().toLocaleDateString('sv'), seg = segunda(hoje), dom = new Date(Date.parse(seg+'T12:00:00Z')+6*864e5).toISOString().slice(0,10), mes = hoje.slice(0,7);
+  const soma = f => { let e = 0, s = 0; (FIN.movimentos||[]).forEach(m => { const d = String(m.data||'').slice(0,10); if (!ids.has(m.contaId) || !f(d)) return;
+      if (m.tipo==='Saída' && /^(pag-.*sal|vale-)/i.test(String(m.id||''))) return; /* salário e vales já estão no salário reservado */
+      const v = Number(String(m.valor).replace(',','.'))||0; if (m.tipo==='Entrada') e += v; else if (m.tipo==='Saída') s += v; }); return { e:r2(e), s:r2(s) }; };
+  const linha = (titulo, r, sal, meta) => { const l = r2(r.e - r.s - sal), precisa = r2(r.s + sal + meta);
+    const cor = l < 0 ? 'var(--bad,#d33)' : l < meta ? '#e08a00' : 'var(--ok)';
+    const est = l < 0 ? '🔴 No vermelho' : l < meta ? `🟠 Abaixo da meta (faltam ${eur(meta-l)})` : '🟢 Meta atingida';
+    return `<div style="margin-top:12px"><div style="display:flex;justify-content:space-between;gap:8px"><b>${titulo}</b><b style="color:${cor}">${eur(l)}</b></div>
+      <div class="m">Entradas ${eur(r.e)} − gastos ${eur(r.s)} − salário do Lucas ${eur(sal)}</div>
+      <div class="m">Para a meta (${eur(meta)} de lucro) precisa entrar ${eur(precisa)}</div>
+      <div class="m" style="color:${cor};font-weight:600">${est}</div></div>`; };
+  return `<div class="card"><div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><b>💶 Total em euros</b><b style="font-size:20px">${eur(total)}</b></div>
+    <div class="m">${contas.map(c=>esc(c.nome)+' '+eur(c.saldo)).join(' · ')}</div>
+    ${linha(`Semana ${seg.slice(8)}/${seg.slice(5,7)} a ${dom.slice(8)}/${dom.slice(5,7)}`, soma(d=>d>=seg && d<=dom), r2(salMes*12/52), r2(META_LUCRO_MES*12/52))}
+    ${linha('Mês', soma(d=>d.slice(0,7)===mes), salMes, META_LUCRO_MES)}</div>`;
+}
 function renderFinancas(){
 if (!FIN) return financas();
 const contas = FIN.contas||[], bens = FIN.bens||[], movs = FIN.movimentos||[];
@@ -781,7 +804,7 @@ s: movsMes.filter(m=>m.area===area&&m.tipo==='Saída').reduce((s,m)=>s+Number(m.
 const rCasa = resumoArea('Casa'), rServico = resumoArea('Serviço');
 const v = n => FIN_OCULTAR ? '••••' : eur(n);
 
-$('#app').innerHTML = `
+$('#app').innerHTML = `${cartaoLucro()}
 <div class="card kpi" style="text-align:center">
 <div class="l" style="display:flex;justify-content:center;align-items:center;gap:8px">Património total <span onclick="FIN_OCULTAR=!FIN_OCULTAR;renderFinancas()" style="cursor:pointer">${FIN_OCULTAR?'🙈':'👁️'}</span></div>
 <div class="v" style="font-size:28px">${v(total)}</div>
