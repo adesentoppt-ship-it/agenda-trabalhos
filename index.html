@@ -30,7 +30,7 @@ nav button.on{color:var(--az);font-weight:600}
 .job .m{color:var(--mu);font-size:14px;margin-top:3px}
 .tag{font-size:12px;padding:2px 8px;border-radius:99px;font-weight:600;white-space:nowrap}
 .Agendado{background:var(--az2);color:var(--az)} .Concluído{background:#e3f4ea;color:var(--ok)}
-.Cancelado{background:#f6e3e1;color:var(--er)} .Orçamento{background:#efe7fb;color:#6b3fb3}
+.Cancelado{background:#f6e3e1;color:var(--er)}.Orçamento{background:#efe7fb;color:#6b3fb3} .Orçamento.recusado{background:#f6e3e1;color:var(--er)}
 .orc{display:flex;gap:6px;margin-top:8px}.orc input:first-child{flex:2}.orc input:nth-child(2){flex:1}
 .orc button,.addorc{border:1px solid var(--bd);background:#fff;border-radius:9px;padding:0 12px;font-size:16px}
 .addorc{width:100%;padding:10px;margin-top:8px;color:var(--az);font-weight:600;font-size:15px}
@@ -248,18 +248,19 @@ if(t==='agenda') agenda(); else if(t==='valores') valores(); else if(t==='financ
 function cartao(j){
 const tel = j.telefone ? `<a href="tel:${esc(j.telefone.replace(/\s/g,''))}" onclick="event.stopPropagation()">📞 Ligar</a>` : '';
 const map = j.morada ? `<a target="_blank" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(j.morada)}" onclick="event.stopPropagation()">📍 Mapa</a>` : '';
-  const concl = j.estado!=='Concluído' && j.estado!=='Cancelado' ? `<button class="p" onclick="event.stopPropagation();concluir('${j.id}')">✅ Concluir</button>` : '';
-  const porPagar = j.estado==='Concluído' && j.pagamento==='Por pagar';
+  const concl =j.estado!=='Concluído' && j.estado!=='Cancelado' && j.estado!=='Orçamento recusado' ? `<button class="p" onclick="event.stopPropagation();concluir('${j.id}')">✅ Concluir</button>` : '';
+  const porPagar = fechado(j) && j.pagamento==='Por pagar';
   const pagoBtn = porPagar && PAPEL==='admin' ? `<button class="pagar" onclick="event.stopPropagation();marcarPago('${j.id}')">💶 Marcar como pago</button>` : '';
 return `<div class="card job" onclick="editar('${j.id}')">
 <div class="top"><span class="h">${esc(j.hora)} · ${esc(dataPT(j.data))}</span><span class="tag ${esc(j.estado)}">${esc(j.estado)}</span></div>
 <div class="n">${esc(j.nome)}</div>
 <div class="m">${esc(j.servico||'')}${j.tecnico?' · 👷 '+esc(j.tecnico):''}${PAPEL==='admin'&&j.origem?' · 📣 '+esc(j.origem):''}</div>
 ${j.morada?`<div class="m">${esc(j.morada)}</div>`:''}
-${j.estado==='Concluído'&&j.valor!==''&&j.valor!=null?`<div class="m"><b style="color:var(--tx)">${eur(totalDe(j))}</b>${j.fatura==='Sim'?` <span style="font-size:12px">(${eur(j.valor)} + IVA ${eur(ivaDe(j))})</span> · 🧾 Fatura`:''}${j.pagamento&&j.pagamento!=='Por pagar'?'· '+esc(j.pagamento):''}</div>`:''}
+${fechado(j)&&j.valor!==''&&j.valor!=null?`<div class="m"><b style="color:var(--tx)">${eur(totalDe(j))}</b>${j.fatura==='Sim'?` <span style="font-size:12px">(${eur(j.valor)} + IVA ${eur(ivaDe(j))})</span> · 🧾 Fatura`:''}${j.pagamento&&j.pagamento!=='Por pagar'?'· '+esc(j.pagamento):''}</div>`:''}
 ${j.estado==='Orçamento dado'&&(j.orcamentos||[]).length?`<div class="m">💬 ${j.orcamentos.length>1?j.orcamentos.length+' orçamentos':'Orçamento'}: ${j.orcamentos.map(o=>`${o.d?esc(o.d)+' ':''}<b style="color:var(--tx)">${eur(o.v)}</b>`).join(' · ')}</div>`:''}
     ${porPagar?`<div class="m" style="color:var(--av);font-weight:600">⏳ Por pagar — o cliente paga depois</div>`:''}
-    ${(j.fotos||[]).length?`<div class="m">📷 ${j.fotos.length} foto${j.fotos.length>1?'s':''}</div>`:''}
+${PAPEL==='admin'&&faturaPendente(j)?'<div class="m" style="color:var(--er);font-weight:600">🧾 Fatura por fazer</div>':''}
+${(j.fotos||[]).length?`<div class="m">📷 ${j.fotos.length} foto${j.fotos.length>1?'s':''}</div>`:''}
     <div class="acts">${tel}${map}${concl}${pagoBtn}</div></div>`;
 }
 function agenda(){
@@ -280,7 +281,9 @@ if (FILTRO==='proximos'){
 const hj = l.filter(j=>j.data===h).sort(ord);
 const fut = l.filter(j=>j.data>h).sort(ord);
 const atras = l.filter(j=>j.data<h && j.estado==='Agendado').sort(ord);
-    const receber = PAPEL==='admin' ? l.filter(j=>j.estado==='Concluído' && j.pagamento==='Por pagar').sort(ord) : [];
+    const receber = PAPEL==='admin' ? l.filter(j=>fechado(j) && j.pagamento==='Por pagar').sort(ord) : [];
+const fpend = PAPEL==='admin' ? JOBS.filter(faturaPendente).length : 0;
+    if (fpend) html += `<div class="card notif" style="cursor:pointer" onclick="SUBV='faturas';ir('valores')"><b>🧾 ${fpend} fatura${fpend>1?'s':''} por fazer</b>Toque para ver e marcar como feita</div>`;
     if(receber.length) html += `<h2 style="color:var(--av)">💶 Por receber (${receber.length}) · ${eur(receber.reduce((t,j)=>t+totalDe(j),0))}</h2>` + receber.map(cartao).join('');
     if(atras.length) html += `<h2 style="color:var(--er)">Por concluir (atrasados)</h2>` + atras.map(cartao).join('');
 html += `<h2>Hoje</h2>` + (hj.length ? hj.map(cartao).join('') : `<div class="card vazio">Nada agendado para hoje</div>`);
@@ -292,7 +295,7 @@ html += `<h2>Orçamentos dados</h2>` + (orc.length ? orc.map(cartao).join('') : 
 const ant = l.filter(j=>j.data<h).sort(ord).reverse();
 html += `<h2>Anteriores</h2>` + (ant.length ? ant.map(cartao).join('') : `<div class="card vazio">Sem trabalhos anteriores</div>`);
 }
-$('#lista').innerHTML = html + '<div style="text-align:center;font-size:11px;color:var(--mu);margin:18px 0 4px">versão 14 · 02/10</div>';
+$('#lista').innerHTML = html + '<div style="text-align:center;font-size:11px;color:var(--mu);margin:18px 0 4px">versão 15 · 04/10</div>';
 }
 
 /* ---------- formulário ---------- */
@@ -308,10 +311,11 @@ const v0 = (j.valor===''||j.valor==null) ? '' : j.valor;
 return `<div id="blocoOrc" style="display:${j.estado==='Orçamento dado'?'block':'none'}">
 <label>Orçamentos dados ao cliente</label><div id="orcLista"></div>
 <button type="button" class="addorc" onclick="addOrc()">+ Adicionar orçamento</button></div>
-<div id="blocoValor" style="display:${j.estado==='Concluído'?'block':'none'}">
+<div id="blocoValor" style="display:${fechado(j)?'block':'none'}">
 <div id="orcAceites"></div>
-<div class="row"><div><label>Valor do trabalho, sem IVA (€)</label><input id="f_valor" inputmode="decimal" value="${esc(v0)}" placeholder="0,00" oninput="contaIva()"></div>
+<div class="row"><div><label id="lblValor">Valor do trabalho, sem IVA (€)</label><input id="f_valor" inputmode="decimal" value="${esc(v0)}" placeholder="0,00" oninput="contaIva()"></div>
 <div><label>Pagamento</label>${selPagamento(j)}</div></div>
+<label>🧰 Material comprado para este trabalho (€) <span style="font-size:12px">— desconta na comissão</span></label><input id="f_material" inputmode="decimal" value="${esc(j.material||'')}" placeholder="0,00 (se não comprou, deixe vazio)">
 <label>O cliente quer fatura?</label>
 <select id="f_fatura" onchange="mostrarFatura()">${opt(['Não','Sim'], fat?'Sim':'Não')}</select>
 <div id="ivaInfo" class="ivainfo"></div>
@@ -431,14 +435,16 @@ const b = $('#blocoFatura'); if (!b) return;
 const s = $('#f_fatura').value === 'Sim'; b.style.display = s ? 'block' : 'none';
 if (s) { verNif(true); setTimeout(()=>$('#f_nif').focus(), 50); }
 }
-function mostrarValorInicial(){ renderOrc(); renderAceites();if ($('#f_estado').value.startsWith('Concluído') && !$('#f_valor').value) { if (ORCS.filter(x=>x.v!=='').length===1) ORCS.forEach(x=>{ if(x.v!=='') x.a=true; }); renderAceites(); somaAceites(); } contaIva(); }
+function rotuloValor(){ const rec = $('#f_estado') && $('#f_estado').value === 'Orçamento recusado'; const lv = $('#lblValor'); if (lv) lv.textContent = rec ? 'Taxa de deslocação, sem IVA (€) — vazio se não cobrou' : 'Valor do trabalho, sem IVA (€)'; const oa = $('#orcAceites'); if (oa) oa.style.display = rec ? 'none' : ''; }
+function mostrarValorInicial(){ renderOrc(); renderAceites(); rotuloValor();if ($('#f_estado').value.startsWith('Concluído') && !$('#f_valor').value) { if (ORCS.filter(x=>x.v!=='').length===1) ORCS.forEach(x=>{ if(x.v!=='') x.a=true; }); renderAceites(); somaAceites(); } contaIva(); }
 function mostrarValor(){
-const e = $('#f_estado').value, c = e === 'Concluído' || e === 'Concluído|Por pagar', o = e === 'Orçamento dado';
+const e = $('#f_estado').value, c = e === 'Concluído' || e === 'Concluído|Por pagar' || e === 'Orçamento recusado', o = e === 'Orçamento dado';
+  rotuloValor();
   if (e === 'Concluído|Por pagar' && $('#f_pagamento') && $('#f_pagamento').tagName === 'SELECT') $('#f_pagamento').value = 'Por pagar';
 $('#blocoValor').style.display = c ? 'block' : 'none';
 $('#blocoOrc').style.display = o ? 'block' : 'none';
 renderOrc(); renderAceites();
-if (c && !$('#f_valor').value) { if (ORCS.filter(x=>x.v!=='').length===1) ORCS.forEach(x=>{ if(x.v!=='') x.a=true; }); renderAceites(); somaAceites(); }
+if (c && e !== 'Orçamento recusado' && !$('#f_valor').value) { if (ORCS.filter(x=>x.v!=='').length===1) ORCS.forEach(x=>{ if(x.v!=='') x.a=true; }); renderAceites(); somaAceites(); }
 contaIva();
 if (c) setTimeout(()=>$('#f_valor').focus(), 50);
 }
@@ -473,7 +479,7 @@ $('#app').innerHTML = `<div class="card">
 <input id="f_servico" list="lserv" value="${esc(j.servico)}" placeholder="Ex.: Desentupimento de esgoto">
 <datalist id="lserv">${['Desentupimento de esgoto','Desentupimento de cozinha','Desentupimento de WC','Limpeza de fossa','Inspeção vídeo','Hidrojato','Reparação de canalização'].map(s=>`<option value="${s}">`).join('')}</datalist>
 <label>Estado</label>
-<select id="f_estado" onchange="mostrarValor()">${opt(['Agendado','Orçamento dado','Em curso','Concluído','Cancelado'], j.estado)+`<option value="Concluído|Por pagar" ${j.estado==='Concluído'&&j.pagamento==='Por pagar'?'selected':''}>⏳ Concluído – cliente falta pagar</option>`}</select>
+<select id="f_estado" onchange="mostrarValor()">${opt(['Agendado','Orçamento dado','Orçamento recusado','Em curso','Concluído','Cancelado'], j.estado)+`<option value="Concluído|Por pagar" ${fechado(j)&&j.pagamento==='Por pagar'?'selected':''}>⏳ Concluído – cliente falta pagar</option>`}</select>
 ${blocoValor(j, false)}
     <label>Notas</label>
     <textarea id="f_notas">${esc(j.notas)}</textarea>
@@ -497,7 +503,7 @@ ${linha('Contribuinte', j.nif)}${linha('Morada', j.morada)}${linha('Telefone', j
 <div class="card">
 <h2 style="margin-top:4px">Fechar trabalho</h2>
 <label>Estado</label>
-<select id="f_estado" onchange="mostrarValor()">${opt(['Agendado','Orçamento dado','Em curso','Concluído'], j.estado)+`<option value="Concluído|Por pagar" ${j.estado==='Concluído'&&j.pagamento==='Por pagar'?'selected':''}>⏳ Concluído – cliente falta pagar</option>`}</select>
+<select id="f_estado" onchange="mostrarValor()">${opt(['Agendado','Orçamento dado','Orçamento recusado','Em curso','Concluído'], j.estado)+`<option value="Concluído|Por pagar" ${fechado(j)&&j.pagamento==='Por pagar'?'selected':''}>⏳ Concluído – cliente falta pagar</option>`}</select>
 ${blocoValor(j, true)}
 ${TRAB.length>1 && TRAB.includes(NOME) ? `<label>Quem fez o trabalho</label><select id="f_tecnico">${[NOME, [NOME].concat(TRAB.filter(n=>n!==NOME)).join(' + ')].map(n=>`<option ${n===j.tecnico||(n===NOME&&!j.tecnico)?'selected':''}>${esc(n)}</option>`).join('')}</select>` : ''}
 <label>Notas</label>
@@ -530,7 +536,7 @@ verNif(true);
 async function guardar(id){
 const g = k => { const e = $('#f_'+k); return e ? e.value : undefined; };
 const _e = g('estado'), _pp = _e === 'Concluído|Por pagar';
-  const concl = _e === 'Concluído' || _pp;
+const concl = _e === 'Concluído' || _pp || _e === 'Orçamento recusado';
 const d = { id, estado: _pp ? 'Concluído' : _e, notas:g('notas') };
 const orcs = ORCS.map(o=>({d:String(o.d||'').trim(), v:String(o.v||'').replace(',', '.').trim(), a:!!o.a})).filter(o=>o.d||o.v);
 if (orcs.some(o=>o.v==='' || isNaN(Number(o.v)))) return toast('Falta o valor (€) de um orçamento');
@@ -550,7 +556,9 @@ if (PAPEL !== 'tecnico'){
 if (!d.nome.trim()) return toast('Falta o nome do cliente');
 if (!d.data || !d.hora) return toast('Falta a data ou hora');
 }
-if (concl && !d.valor) return toast('Coloque o valor do trabalho');
+if (_e === 'Orçamento recusado' && !d.valor) d.valor = '0';
+  if (concl && $('#f_material')) { d.material = ($('#f_material').value||'').replace(',', '.').trim(); if (d.material && isNaN(Number(d.material))) return toast('Valor do material inválido'); }
+  if (concl && !d.valor) return toast('Coloque o valor do trabalho');
 if (concl && isNaN(Number(d.valor))) return toast('Valor inválido');
 setJobs(await call('guardar', d));
 toast('Guardado ✓'); ir('agenda');
@@ -561,11 +569,61 @@ setJobs(await call('apagar', {id})); toast('Apagado'); ir('agenda');
 }
 
 /* ---------- valores ---------- */
-function valores(){
+/* ---------- fechado, faturas e comissões ---------- */
+let SUBV = 'resumo', COMS = null;
+const COMISSAO = { 'Lucas': 0.10 };   // 10% para o Lucas
+function fechado(j){ return j.estado==='Concluído' || j.estado==='Orçamento recusado'; }
+function faturaPendente(j){ return fechado(j) && j.fatura==='Sim' && !j.faturaFeita; }
+function pascoa(y){const a=y%19,b=Math.floor(y/100),c=y%100,d=Math.floor(b/4),e=b%4,f=Math.floor((b+8)/25),g=Math.floor((b-f+1)/3),h=(19*a+b-d-g+15)%30,i=Math.floor(c/4),k=c%4,l=(32+2*e+2*i-h-k)%7,m=Math.floor((a+11*h+22*l)/451),mes=Math.floor((h+l-7*m+114)/31),dia=((h+l-7*m+114)%31)+1;return Date.UTC(y,mes-1,dia);}
+const _FER = {};
+function feriado(ds){ const y=+ds.slice(0,4); if(!_FER[y]){ const p=pascoa(y), f=n=>new Date(p+n*864e5).toISOString().slice(0,10);
+  _FER[y]=new Set(['01-01','04-25','05-01','06-10','08-15','10-05','11-01','12-01','12-08','12-25'].map(x=>y+'-'+x).concat([f(-2),f(0),f(60)])); } return _FER[y].has(ds); }
+function foraHoras(j){ if(!j.data) return false; const dow=new Date(j.data+'T12:00:00Z').getUTCDay(); if(dow===0||dow===6||feriado(j.data)) return true; const hh=parseInt(String(j.hora||'12'),10); return hh<8 || hh>=17; }
+function segunda(ds){ const d=new Date(ds+'T12:00:00Z'); d.setUTCDate(d.getUTCDate()-((d.getUTCDay()+6)%7)); return d.toISOString().slice(0,10); }
+function comissaoDe(j, nome){ const taxa=COMISSAO[nome]; if(!taxa || !fechado(j)) return 0; const tecs=String(j.tecnico||'').split(/\s*[+,]\s*/).filter(Boolean);
+  if(!tecs.includes(nome) || !foraHoras(j)) return 0; const base=Math.max(0,(Number(j.valor)||0)-(Number(j.material)||0)); return r2(base/tecs.length*taxa); }
+function segValores(){ return '<div class="seg" style="margin-bottom:10px">' + [['resumo','📊 Resumo'],['faturas','🧾 Faturas'],['comissoes','💼 Comissões']].map(([k,t])=>`<button class="${SUBV===k?'on':''}" onclick="SUBV='${k}';valores()">${t}</button>`).join('') + '</div>'; }
+function valores(){ if (SUBV==='faturas') return vFaturas(); if (SUBV==='comissoes') return vComissoes(); valoresResumo(); $('#app').insertAdjacentHTML('afterbegin', segValores()); }
+function vFaturas(){
+  const pend = JOBS.filter(faturaPendente).sort((a,b)=>(a.data+a.hora).localeCompare(b.data+b.hora));
+  const meses = {}; JOBS.filter(j=>fechado(j)&&j.fatura==='Sim'&&j.valor!==''&&j.valor!=null).forEach(j=>{ const m=j.data.slice(0,7); const o=meses[m]||(meses[m]={n:0,base:0,iva:0,pend:0}); o.n++; o.base+=Number(j.valor)||0; o.iva+=ivaDe(j); if(!j.faturaFeita) o.pend++; });
+  const nomeMes = m => { const [y,mm]=m.split('-'); return new Date(y,mm-1,1).toLocaleDateString('pt-PT',{month:'long',year:'numeric'}); };
+  const horas = j => { const t=Date.parse(String(j.concluidoEm||j.atualizado||'').replace(' ','T')); return isNaN(t)?'':' · há '+Math.max(0,Math.floor((Date.now()-t)/36e5))+' h'; };
+  $('#app').innerHTML = segValores() + `<h2 style="color:var(--er)">🧾 Faturas por fazer (${pend.length})</h2>` +
+    (pend.length ? pend.map(j=>`<div class="card"><div style="display:flex;justify-content:space-between;gap:8px"><b>${esc(j.nome)}</b><b>${eur(totalDe(j))}</b></div>
+      <div class="m">${j.data.slice(8)}/${j.data.slice(5,7)} · NIF ${esc(j.nif||'—')} · ${eur(j.valor)} + IVA ${eur(ivaDe(j))}${horas(j)}</div>
+      <div class="acts"><button class="p" onclick="faturaFeita('${j.id}')">✅ Fatura feita</button><button onclick="editar('${j.id}')">Abrir trabalho</button></div></div>`).join('') : '<div class="card vazio">Nenhuma fatura por fazer 👍</div>') +
+    '<h2>🧾 Total de faturas por mês</h2><div class="card"><table><tr><th>Mês</th><th class="r">Nº</th><th class="r">Sem IVA</th><th class="r">IVA</th><th class="r">Total</th></tr>' +
+    (Object.keys(meses).sort().reverse().map(m=>{ const o=meses[m]; return `<tr><td>${nomeMes(m)}${o.pend?` <span class="bad">(${o.pend} por fazer)</span>`:''}</td><td class="r">${o.n}</td><td class="r">${eur(o.base)}</td><td class="r">${eur(o.iva)}</td><td class="r"><b>${eur(o.base+o.iva)}</b></td></tr>`; }).join('') || '<tr><td class="vazio" colspan="5">Ainda sem faturas</td></tr>') + '</table></div>';
+}
+async function faturaFeita(id){ const j = JOBS.find(x=>x.id===id); if(!j) return; setJobs(await call('guardar', { id, estado: j.estado, faturaFeita: hoje() })); toast('✅ Fatura marcada como feita'); vFaturas(); }
+async function vComissoes(){
+  $('#app').innerHTML = segValores() + '<div class="card vazio">A carregar…</div>';
+  try { COMS = await call('comissoes', {}, true); } catch(e){ COMS = COMS || []; }
+  if (TAB!=='valores' || SUBV!=='comissoes') return;
+  let html = segValores();
+  Object.keys(COMISSAO).forEach(nome => {
+    const sem = {}; JOBS.forEach(j=>{ const c=comissaoDe(j,nome); if(c>0){ const s=segunda(j.data); (sem[s]=sem[s]||[]).push([j,c]); } });
+    const semanas = Object.keys(sem).sort().reverse();
+    html += `<h2>💼 Comissão do ${esc(nome)} (${Math.round(COMISSAO[nome]*100)}%)</h2><div class="hint" style="margin:-4px 4px 10px;color:var(--mu)">Só trabalhos depois das 17h, antes das 8h, sábados, domingos e feriados. Valor sem IVA menos o material. Trabalhos a dois contam metade. Paga ao domingo (semana de segunda a domingo).</div>`;
+    if (!semanas.length) html += '<div class="card vazio">Ainda sem comissões</div>';
+    semanas.forEach(s => {
+      const itens = sem[s], tot = r2(itens.reduce((t,x)=>t+x[1],0)), fim = new Date(Date.parse(s+'T12:00:00Z')+6*864e5).toISOString().slice(0,10);
+      const pg = (COMS||[]).find(c=>c.semana===s && c.tecnico===nome), dif = pg && Math.abs(pg.valor-tot) > 0.009;
+      html += `<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><b>Semana ${s.slice(8)}/${s.slice(5,7)} a ${fim.slice(8)}/${fim.slice(5,7)}</b><b style="font-size:18px">${eur(tot)}</b></div>
+        <table style="margin-top:6px">${itens.map(([j,c])=>`<tr><td>${j.data.slice(8)}/${j.data.slice(5,7)} ${esc(j.hora||'')}</td><td>${esc(j.nome)}${String(j.tecnico).includes('+')?' (a dois)':''}${Number(j.material)?' · material '+eur(j.material):''}</td><td class="r">${eur(c)}</td></tr>`).join('')}</table>
+        ${pg ? `<div class="m" style="color:var(--ok);font-weight:600;margin-top:8px">✅ Pago ${eur(pg.valor)} em ${esc(pg.pagoEm)} (${esc(pg.pagoPor)})</div>${dif?`<div class="m bad">⚠️ O total mudou depois do pagamento (diferença ${eur(tot-pg.valor)})</div><div class="acts"><button class="pagar" onclick="pagarCom('${s}','${nome}',${tot},${itens.length})">Atualizar para ${eur(tot)}</button></div>`:''}`
+             : `<div class="acts"><button class="pagar" onclick="pagarCom('${s}','${nome}',${tot},${itens.length})">💶 Marcar como pago</button></div>`}</div>`;
+    });
+  });
+  $('#app').innerHTML = html;
+}
+async function pagarCom(s, nome, valor, n){ if (!confirm('Confirmar que pagou ' + eur(valor) + ' ao ' + nome + '?')) return; COMS = await call('pagarcomissao', { semana: s, tecnico: nome, valor, trabalhos: n }); toast('✅ Comissão marcada como paga'); vComissoes(); }
+function valoresResumo(){
 const meses = [...new Set(JOBS.map(j=>j.data.slice(0,7)))].sort().reverse();
 const atual = window._mes || hoje().slice(0,7);
 if (!meses.includes(atual)) meses.unshift(atual);
-const js = JOBS.filter(j=>j.data.slice(0,7)===atual && j.estado==='Concluído');
+const js = JOBS.filter(j=>j.data.slice(0,7)===atual && fechado(j));
 const ganho = r2(js.reduce((s,j)=>s+(Number(j.valor)||0),0)); // o seu ganho (sem IVA)
 const ivaTot = r2(js.reduce((s,j)=>s+ivaDe(j),0)); // IVA a entregar ao Estado
 const recebido = r2(ganho + ivaTot); // o que os clientes pagaram
@@ -588,7 +646,7 @@ $('#app').innerHTML = `
 <div class="card kpi"><div class="l">Orçamentos dados</div><div class="v">${nOrc}</div></div>
 <div class="card kpi"><div class="l">Sem valor registado</div><div class="v" style="color:${semValor?'var(--er)':'inherit'}">${semValor}</div></div>
 </div>
-    ${(()=>{ const pr = JOBS.filter(j=>j.estado==='Concluído' && j.pagamento==='Por pagar');
+    ${(()=>{ const pr = JOBS.filter(j=>fechado(j) && j.pagamento==='Por pagar');
       return pr.length ? `<h2 style="color:var(--av)">💶 Por receber (todos os meses)</h2><div class="card"><table>${pr.map(j=>`<tr><td>${j.data.slice(8)}/${j.data.slice(5,7)}</td><td>${esc(j.nome)}</td><td class="r">${eur(totalDe(j))}</td><td class="r"><button class="pagar" style="border:0;border-radius:7px;padding:6px 10px" onclick="marcarPago('${j.id}')">Pago</button></td></tr>`).join('')}</table></div>` : ''; })()}
     <h2>Por técnico <span style="text-transform:none;font-weight:400">(sem IVA)</span></h2><div class="card"><table>${agrupa('tecnico').map(([k,v])=>`<tr><td>${esc(k)}</td><td class="r">${eur(v)}</td></tr>`).join('')||'<tr><td class="vazio">—</td></tr>'}</table></div>
 <h2>📣 Por origem do trabalho <span style="text-transform:none;font-weight:400">(sem IVA)</span></h2><div class="card"><table>${agrupa('origem').map(([k,v])=>`<tr><td>${esc(k)}</td><td class="r">${js.filter(j=>(j.origem||'—')===k).length} trab.</td><td class="r">${eur(v)}</td></tr>`).join('')||'<tr><td class="vazio">—</td></tr>'}</table></div>

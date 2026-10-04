@@ -13,7 +13,7 @@ const ALARMES_MIN = [60, 15]; // avisos antes do trabalho (minutos)
 const FOLHA = 'Trabalhos';
 const COLS = ['id', 'data', 'hora', 'duracao', 'nome', 'nif', 'morada', 'telefone',
 'servico', 'tecnico', 'estado', 'valor', 'pagamento', 'notas',
-'eventoId', 'criado', 'atualizado', 'fatura', 'lembrado', 'iva', 'total', 'orcamento','fotos', 'pagoEm', 'origem'];
+'eventoId', 'criado', 'atualizado', 'fatura', 'lembrado', 'iva', 'total', 'orcamento','fotos', 'pagoEm', 'origem', 'material', 'concluidoEm', 'faturaFeita', 'faturaAviso'];
 const IVA_TAXA = 0.23;
 
 function doGet() {
@@ -49,6 +49,8 @@ case 'guardar': return visiveis_(u, guardar_(dados, u));
     case 'foto': return visiveis_(u, addFoto_(dados, u));      // juntar foto (fica no Google Drive)
     case 'verfoto': return verFoto_(dados, u);
     case 'apagarfoto': return visiveis_(u, apagarFoto_(dados, u));
+    case 'comissoes': if (papel !== 'admin') throw new Error('Sem acesso'); return comissoes_();
+    case 'pagarcomissao': if (papel !== 'admin') throw new Error('Sem acesso'); return pagarComissao_(dados, u);
     case 'subscrever': return subscrever_(dados, u.nome); // ativar notificações neste telemóvel
 case 'aviso': return ultimoAviso_(u.nome); // texto da última notificação
 case 'apagar':
@@ -95,7 +97,10 @@ sh.setFrozenRows(1);
 sh.getRange('A:Z').setNumberFormat('@'); // texto, para não estragar datas/NIF
 sh.getRange(2, COLS.indexOf('valor') + 1, sh.getMaxRows() - 1, 1).setNumberFormat('0.00');
 }
-if (sh.getLastColumn() < COLS.length) sh.getRange(1, 1, 1, COLS.length).setValues([COLS]).setFontWeight('bold');
+if (sh.getLastColumn() < COLS.length) {
+    sh.getRange(1, 1, 1, COLS.length).setValues([COLS]).setFontWeight('bold');
+    if (COLS.length > 26) sh.getRange(1, 27, sh.getMaxRows(), COLS.length - 26).setNumberFormat('@'); // texto (datas não mudam)
+  }
 return sh;
 }
 
@@ -156,9 +161,9 @@ const t = Object.assign({}, atual);
 if (papel === 'tecnico' && linha < 0) throw new Error('Só o dono pode criar trabalhos');
 // Contribuinte: o técnico só o coloca no fim, e só se o cliente quiser fatura.
 let campos = papel === 'tecnico'
-? ['estado', 'valor', 'pagamento', 'notas', 'fatura']
+? ['estado', 'valor', 'pagamento', 'notas', 'fatura', 'material']
 : ['data', 'hora', 'duracao', 'nome', 'nif', 'morada', 'telefone', 'servico',
-'tecnico', 'estado', 'valor', 'pagamento', 'notas', 'fatura', 'pagoEm', 'origem'];
+'tecnico', 'estado', 'valor', 'pagamento', 'notas', 'fatura', 'pagoEm', 'origem', 'material', 'faturaFeita'];
     if (papel === 'tecnico' && d.fatura === 'Sim') campos = campos.concat(['nif', 'nome']);
     // "Por pagar": só a Mariana ou o Alex (admin) marcam como pago
     if (papel === 'tecnico' && atual.pagamento === 'Por pagar' && d.pagamento !== undefined && d.pagamento !== 'Por pagar')
@@ -187,6 +192,9 @@ const base = Number(t.valor) || 0;
 t.iva = (t.fatura === 'Sim' && t.valor !== '') ? (Math.round(base * IVA_TAXA * 100) / 100).toFixed(2) : (t.valor !== '' ? '0.00' : '');
 t.total = t.valor !== '' ? (base + (Number(t.iva) || 0)).toFixed(2) : '';
 t.estado = t.estado || 'Agendado';
+    if ((t.estado === 'Concluído' || t.estado === 'Orçamento recusado') && !t.concluidoEm) t.concluidoEm = agora;
+    if (t.estado !== 'Concluído' && t.estado !== 'Orçamento recusado') t.concluidoEm = '';
+    t.material = (t.material === undefined || String(t.material).trim() === '') ? '' : String(Number(String(t.material).replace(',', '.')) || 0);
 t.atualizado = agora;
 
 if (linha > 0 && (t.data !== atual.data || t.hora !== atual.hora)) t.lembrado = '';
@@ -224,7 +232,9 @@ return [quem(admins_()), '✅ Concluído por ' + u.nome + ': ' + t.nome,
 (t.valor === '' ? 'sem valor' : t.fatura === 'Sim'
 ? eur(t.valor) + ' + IVA ' + eur(t.iva) + ' = ' + eur(t.total) + ' · 🧾 fatura'
 : eur(t.valor) + ' (sem fatura)') + (t.pagamento ? ' · ' + t.pagamento : '')];
-if (u.papel === 'tecnico' && t.estado === 'Orçamento dado' && (!antes || antes.estado !== 'Orçamento dado'))
+if (antes && t.estado === 'Orçamento recusado' && antes.estado !== 'Orçamento recusado')
+    return [quem(admins_()), '❌ Orçamento recusado: ' + t.nome, Number(t.valor) ? 'Taxa de deslocação ' + eur(t.valor) : 'Sem taxa de deslocação'];
+  if (u.papel === 'tecnico' && t.estado === 'Orçamento dado' && (!antes || antes.estado !== 'Orçamento dado'))
 return [quem(admins_()), '💬 Orçamento dado por ' + u.nome + ': ' + t.nome,
 lerOrcs_(t.orcamento).map(o => (o.d ? o.d + ' ' : '') + eur(o.v)).join(' · ') || 'sem valor indicado'];
 return null;
@@ -647,8 +657,50 @@ function apagarFoto_(d, u) {
   return listar_();
 }
 
+/* ---------- COMISSÕES (pagas ao domingo, semana de segunda a domingo) ---------- */
+function folhaCom_() {
+  const ss = SpreadsheetApp.getActive(); let sh = ss.getSheetByName('Comissoes');
+  if (!sh) { sh = ss.insertSheet('Comissoes'); sh.appendRow(['semana', 'tecnico', 'valor', 'trabalhos', 'pagoEm', 'pagoPor']); sh.setFrozenRows(1); sh.getRange('A:F').setNumberFormat('@'); }
+  return sh;
+}
+function comissoes_() {
+  const sh = folhaCom_(); const n = sh.getLastRow() - 1; if (n < 1) return [];
+  return sh.getRange(2, 1, n, 6).getDisplayValues().map(r => ({ semana: r[0], tecnico: r[1], valor: Number(String(r[2]).replace(',', '.')) || 0, trabalhos: r[3], pagoEm: r[4], pagoPor: r[5] }));
+}
+function pagarComissao_(d, u) {
+  const sem = String(d.semana || ''); if (!/^\d{4}-\d{2}-\d{2}$/.test(sem)) throw new Error('Semana inválida');
+  const lock = LockService.getScriptLock(); lock.waitLock(20000);
+  try {
+    const sh = folhaCom_(); const vals = sh.getDataRange().getDisplayValues();
+    const agora = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm');
+    const row = [sem, String(d.tecnico || ''), String(Math.round((Number(d.valor) || 0) * 100) / 100), String(d.trabalhos || ''), agora, u.nome];
+    for (let i = 1; i < vals.length; i++) if (vals[i][0] === sem && vals[i][1] === row[1]) { sh.getRange(i + 1, 1, 1, 6).setValues([row]); return comissoes_(); }
+    sh.appendRow(row); return comissoes_();
+  } finally { lock.releaseLock(); }
+}
+/* ---------- LEMBRETE DE FATURAS: 24h depois de concluído, 1 vez por dia, até carregar em "Fatura feita" ---------- */
+function lembrarFaturas_() {
+  const tz = Session.getScriptTimeZone(), hoje = Utilities.formatDate(new Date(), tz, 'yyyy-MM-dd');
+  const hh = Number(Utilities.formatDate(new Date(), tz, 'H')); if (hh < 9 || hh >= 21) return;
+  const sh = folha_(); const n = sh.getLastRow() - 1; if (n < 1) return;
+  const vals = sh.getRange(2, 1, n, COLS.length).getDisplayValues(); const I = k => COLS.indexOf(k); const pend = [];
+  vals.forEach((r, i) => {
+    const est = r[I('estado')];
+    if ((est === 'Concluído' || est === 'Orçamento recusado') && r[I('fatura')] === 'Sim' && !r[I('faturaFeita')] && r[I('faturaAviso')] !== hoje) {
+      const c = r[I('concluidoEm')] || r[I('atualizado')];
+      let t = 0; try { t = c ? Utilities.parseDate(c, tz, 'yyyy-MM-dd HH:mm').getTime() : 0; } catch (e) {}
+      if (t && Date.now() - t >= 24 * 3600 * 1000) pend.push({ i: i, nome: r[I('nome')] });
+    }
+  });
+  if (!pend.length) return;
+  const dest = UTILIZADORES.some(x => x.nome === 'Mariana') ? ['Mariana'] : admins_();
+  notificar_(dest, '🧾 ' + pend.length + (pend.length > 1 ? ' faturas por fazer' : ' fatura por fazer'), pend.map(x => x.nome).join(' · ') + ' — abra a app e carregue em "Fatura feita".');
+  pend.forEach(x => sh.getRange(x.i + 2, I('faturaAviso') + 1).setValue(hoje));
+}
+
 function configurar() {
   folha_();
+  folhaCom_();
   pastaFotos_();
 folhaAvisos_();
 CalendarApp.getDefaultCalendar();

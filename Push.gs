@@ -130,6 +130,7 @@ function ultimoAviso_(nome) {
 
 /* Corre de 10 em 10 min (acionador criado por configurar): avisa o técnico 1h antes */
 function lembretes() {
+  try { lembrarFaturas_(); } catch (e) {}
   const tz = Session.getScriptTimeZone(), agora = Date.now();
   const sh = folha_(); const n = sh.getLastRow() - 1; if (n < 1) return;
   const vals = sh.getRange(2, 1, n, COLS.length).getDisplayValues();
