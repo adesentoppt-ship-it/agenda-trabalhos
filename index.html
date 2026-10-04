@@ -295,7 +295,7 @@ html += `<h2>Orçamentos dados</h2>` + (orc.length ? orc.map(cartao).join('') : 
 const ant = l.filter(j=>j.data<h).sort(ord).reverse();
 html += `<h2>Anteriores</h2>` + (ant.length ? ant.map(cartao).join('') : `<div class="card vazio">Sem trabalhos anteriores</div>`);
 }
-$('#lista').innerHTML = html + '<div style="text-align:center;font-size:11px;color:var(--mu);margin:18px 0 4px">versão 15 · 04/10</div>';
+$('#lista').innerHTML = html + '<div style="text-align:center;font-size:11px;color:var(--mu);margin:18px 0 4px">versão 16 · 04/10</div>';
 }
 
 /* ---------- formulário ---------- */
@@ -461,7 +461,7 @@ $('#app').innerHTML = `<div class="card">
 <div><label>Técnico</label><select id="f_tecnico"><option value="">— Qualquer um —</option>${[...new Set(TRAB.concat(TRAB.length>1?[TRAB.join(' + ')]:[]).concat(j.tecnico?[j.tecnico]:[]))].map(n=>`<option ${n===j.tecnico?'selected':''}>${esc(n)}</option>`).join('')}</select></div></div>
 
 <label>📣 De onde veio o trabalho</label>
-<select id="f_origem"><option value="">—</option>${['Silva Desentupimentos','a.DesentopPT','Cartão','Dreno Desentope','Desentupimento de Esgoto PT','OLX'].concat(j.origem && !['Silva Desentupimentos','a.DesentopPT','Cartão','Dreno Desentope','Desentupimento de Esgoto PT','OLX'].includes(j.origem) ? [j.origem] : []).map(o=>`<option ${o===j.origem?'selected':''}>${esc(o)}</option>`).join('')}</select>
+<select id="f_origem"><option value="">—</option>${['Silva Desentupimentos','a.DesentopPT','Cartão','Dreno Desentope','Desentupimento de Esgoto PT','OLX','Trabalho repassado'].concat(j.origem && !['Silva Desentupimentos','a.DesentopPT','Cartão','Dreno Desentope','Desentupimento de Esgoto PT','OLX','Trabalho repassado'].includes(j.origem) ? [j.origem] : []).map(o=>`<option ${o===j.origem?'selected':''}>${esc(o)}</option>`).join('')}</select>
 <h2>Cliente</h2>
 <label>Contribuinte (NIF) <span style="font-size:12px">— só se quiser fatura</span></label>
 <input id="f_nif" inputmode="numeric" maxlength="9" value="${esc(j.nif)}" placeholder="9 dígitos" oninput="verNif()">
@@ -581,7 +581,7 @@ function feriado(ds){ const y=+ds.slice(0,4); if(!_FER[y]){ const p=pascoa(y), f
 function foraHoras(j){ if(!j.data) return false; const dow=new Date(j.data+'T12:00:00Z').getUTCDay(); if(dow===0||dow===6||feriado(j.data)) return true; const hh=parseInt(String(j.hora||'12'),10); return hh<8 || hh>=17; }
 function segunda(ds){ const d=new Date(ds+'T12:00:00Z'); d.setUTCDate(d.getUTCDate()-((d.getUTCDay()+6)%7)); return d.toISOString().slice(0,10); }
 function comissaoDe(j, nome){ const taxa=COMISSAO[nome]; if(!taxa || !fechado(j)) return 0; const tecs=String(j.tecnico||'').split(/\s*[+,]\s*/).filter(Boolean);
-  if(!tecs.includes(nome) || !foraHoras(j)) return 0; const base=Math.max(0,(Number(j.valor)||0)-(Number(j.material)||0)); return r2(base/tecs.length*taxa); }
+  if(!tecs.includes(nome) || !foraHoras(j)) return 0; const base=Math.max(0,(Number(j.valor)||0)-(Number(j.material)||0)); return r2(base*taxa); // a dois: o Lucas recebe sobre o valor todo }
 function segValores(){ return '<div class="seg" style="margin-bottom:10px">' + [['resumo','📊 Resumo'],['faturas','🧾 Faturas'],['comissoes','💼 Comissões']].map(([k,t])=>`<button class="${SUBV===k?'on':''}" onclick="SUBV='${k}';valores()">${t}</button>`).join('') + '</div>'; }
 function valores(){ if (SUBV==='faturas') return vFaturas(); if (SUBV==='comissoes') return vComissoes(); valoresResumo(); $('#app').insertAdjacentHTML('afterbegin', segValores()); }
 function vFaturas(){
@@ -605,7 +605,7 @@ async function vComissoes(){
   Object.keys(COMISSAO).forEach(nome => {
     const sem = {}; JOBS.forEach(j=>{ const c=comissaoDe(j,nome); if(c>0){ const s=segunda(j.data); (sem[s]=sem[s]||[]).push([j,c]); } });
     const semanas = Object.keys(sem).sort().reverse();
-    html += `<h2>💼 Comissão do ${esc(nome)} (${Math.round(COMISSAO[nome]*100)}%)</h2><div class="hint" style="margin:-4px 4px 10px;color:var(--mu)">Só trabalhos depois das 17h, antes das 8h, sábados, domingos e feriados. Valor sem IVA menos o material. Trabalhos a dois contam metade. Paga ao domingo (semana de segunda a domingo).</div>`;
+    html += `<h2>💼 Comissão do ${esc(nome)} (${Math.round(COMISSAO[nome]*100)}%)</h2><div class="hint" style="margin:-4px 4px 10px;color:var(--mu)">Só trabalhos depois das 17h, antes das 8h, sábados, domingos e feriados. Valor sem IVA menos o material. Trabalhos a dois contam o valor todo. Paga ao domingo (semana de segunda a domingo).</div>`;
     if (!semanas.length) html += '<div class="card vazio">Ainda sem comissões</div>';
     semanas.forEach(s => {
       const itens = sem[s], tot = r2(itens.reduce((t,x)=>t+x[1],0)), fim = new Date(Date.parse(s+'T12:00:00Z')+6*864e5).toISOString().slice(0,10);
