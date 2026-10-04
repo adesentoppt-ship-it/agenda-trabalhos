@@ -216,7 +216,7 @@ $('#pin').addEventListener('keydown', e => { if(e.key==='Enter') entrar(e.target
 function mostrarApp(){
 $('#quem').textContent = NOME ? ' · ' + NOME : '';
 $('#nav').style.display='flex'; $('#sair').style.display='block';
-document.querySelectorAll('nav button[data-t=novo], nav button[data-t=valores]').forEach(b=>b.style.display = PAPEL==='tecnico' ? 'none' : '');
+document.querySelectorAll('nav button[data-t=novo], nav button[data-t=valores]').forEach(b=>b.style.display = PAPEL==='tecnico' && !(b.dataset.t==='valores' && (COMISSAO[NOME] || SALARIOS.some(s=>s.nome===NOME))) ? 'none' : '');
 const bf = document.querySelector('nav button[data-t=financas]'); if (bf) bf.style.display = PODE_FINANCAS ? '' : 'none';
 }
 async function entrar(p){
@@ -295,7 +295,7 @@ html += `<h2>Orçamentos dados</h2>` + (orc.length ? orc.map(cartao).join('') : 
 const ant = l.filter(j=>j.data<h).sort(ord).reverse();
 html += `<h2>Anteriores</h2>` + (ant.length ? ant.map(cartao).join('') : `<div class="card vazio">Sem trabalhos anteriores</div>`);
 }
-$('#lista').innerHTML = html + '<div style="text-align:center;font-size:11px;color:var(--mu);margin:18px 0 4px">versão 18 · 04/10</div>';
+$('#lista').innerHTML = html + '<div style="text-align:center;font-size:11px;color:var(--mu);margin:18px 0 4px">versão 19 · 04/10</div>';
 }
 
 /* ---------- formulário ---------- */
@@ -585,18 +585,49 @@ function comissaoDe(j, nome){ const taxa = j.estado==='Orçamento recusado' ? (C
 function comissaoTotal(j){ return Object.keys(COMISSAO).reduce((t,n)=>t+comissaoDe(j,n),0); }
 function entregarDe(j){ if (j.origem!=='Trabalho repassado' || !fechado(j)) return 0; return r2(((Number(j.valor)||0) - comissaoTotal(j))/2); }
 const SALARIOS = [{ nome:'Lucas', valor:920, dia:16 }];
+const HORAS_SEMANA = 40; /* segunda a sexta, 8h por dia */
+const TIPOS_FALTA = { 'Injustificada': true, 'Justificada sem pagamento': true, 'Justificada paga': false };
+let FALTAS = [];
+function valorHora(nome){ const s = SALARIOS.find(x=>x.nome===nome); return s ? s.valor*12/(52*HORAS_SEMANA) : 0; }
+function linhaFalta(f, podeApagar){ return `<tr><td>${esc(f.data.slice(8))}/${esc(f.data.slice(5,7))}</td><td>${esc(f.tipo)} · ${String(f.horas).replace('.',',')}h${f.notas?' · '+esc(f.notas):''}</td><td class="r">${f.desconto?'− '+eur(f.desconto):'—'}</td>${podeApagar?`<td class="r"><button style="padding:2px 8px" onclick="apagarFalta('${esc(f.id)}')">🗑</button></td>`:''}</tr>`; }
 function cartaoSalarios(){
+  const ADM = PAPEL!=='tecnico';
   const d = new Date(), y = d.getFullYear(), m = d.getMonth();
-  return SALARIOS.map(s => { let out = '';
+  return SALARIOS.filter(s=>ADM || s.nome===NOME).map(s => { let out = '';
     [[y, m-1], [y, m]].forEach(([yy, mm]) => { const dt = new Date(yy, mm, s.dia); const chave = dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(s.dia).padStart(2,'0');
       const pg = (COMS||[]).find(c=>c.semana===chave && c.tecnico===s.nome+' (salário)'); const atual = mm===m;
       if (!pg && !atual && Date.now() < dt.getTime()) return; if (pg && !atual) return;
-      out += `<div class="card ${pg?'':'notif'}"><div style="display:flex;justify-content:space-between;gap:8px"><b>💶 Salário do ${esc(s.nome)} — dia ${s.dia}/${chave.slice(5,7)}</b><b>${eur(s.valor)}</b></div>` +
-        (pg ? `<div class="m" style="color:var(--ok);font-weight:600">✅ Pago em ${esc(pg.pagoEm)} (${esc(pg.pagoPor)})</div>` : `<div class="acts"><button class="pagar" onclick="pagarCom('${chave}','${s.nome} (salário)',${s.valor},0)">💶 Marcar salário como pago</button></div>`) + '</div>'; });
+      const fs = (FALTAS||[]).filter(f=>f.tecnico===s.nome && (pg ? f.salario===chave : (!f.salario && f.data<=chave))).sort((a,b)=>a.data.localeCompare(b.data));
+      const desc = r2(fs.reduce((t,f)=>t+f.desconto,0)), liq = r2(s.valor-desc);
+      out += `<div class="card ${pg?'':'notif'}"><div style="display:flex;justify-content:space-between;gap:8px"><b>💶 Salário do ${esc(s.nome)} — dia ${s.dia}/${chave.slice(5,7)}</b><b>${eur(pg?pg.valor:liq)}</b></div>`
+        + (fs.length ? `<div class="m">Salário ${eur(s.valor)} · faltas − ${eur(desc)}</div><table style="margin-top:6px">${fs.map(f=>linhaFalta(f, ADM && !pg)).join('')}</table>` : `<div class="m">Sem faltas${pg?'':' a descontar'}</div>`)
+        + (pg ? `<div class="m" style="color:var(--ok);font-weight:600">✅ Pago ${eur(pg.valor)} em ${esc(pg.pagoEm)} (${esc(pg.pagoPor)})</div>`
+              : ADM ? `<div class="acts"><button class="pagar" onclick="pagarCom('${chave}','${s.nome} (salário)',${liq},${fs.length})">💶 Marcar salário como pago</button></div>` : '<div class="m" style="color:var(--mu)">⏳ Por pagar</div>')
+        + '</div>'; });
+    const vh = valorHora(s.nome);
+    if (ADM) out += `<div class="card"><b>➕ Registar falta do ${esc(s.nome)}</b>
+      <label>Data</label><input type="date" id="fa_data" value="${new Date().toLocaleDateString('sv')}">
+      <label>Tipo</label><select id="fa_tipo">${Object.keys(TIPOS_FALTA).map(t=>`<option>${t}</option>`).join('')}</select>
+      <label>Período</label><select id="fa_horas"><option value="8">Dia inteiro (8h)</option><option value="4">Meio dia (4h)</option><option value="1">1 hora</option><option value="2">2 horas</option><option value="3">3 horas</option></select>
+      <label>Nº de dias seguidos</label><input type="number" id="fa_dias" value="1" min="1" max="31" inputmode="numeric">
+      <label>Notas</label><input id="fa_notas" placeholder="Opcional">
+      <div class="hint" style="color:var(--mu);margin-top:6px">Desconto: ${eur(vh)}/hora · ${eur(vh*4)} meio dia · ${eur(vh*8)} dia inteiro (salário × 12 ÷ 52 semanas ÷ ${HORAS_SEMANA}h). "Justificada paga" não desconta. É descontada no próximo salário.</div>
+      <div class="acts"><button class="pagar" onclick="guardarFalta('${s.nome}')">Guardar falta</button></div></div>`;
+    else out += `<div class="hint" style="margin:-4px 4px 10px;color:var(--mu)">Falta injustificada ou sem pagamento: desconto de ${eur(vh*8)} por dia (${eur(vh)}/hora).</div>`;
     return out; }).join('');
 }
+async function guardarFalta(nome){
+  const dias = Math.max(1, Math.min(31, Number($('#fa_dias').value)||1)), horas = Number($('#fa_horas').value) * dias;
+  const tipo = $('#fa_tipo').value, data = $('#fa_data').value;
+  if (!data) return alert('Escolha a data');
+  const desc = TIPOS_FALTA[tipo] ? r2(horas*valorHora(nome)) : 0;
+  if (!confirm('Registar falta do ' + nome + ' (' + horas + 'h, ' + tipo + ')? Desconto: ' + eur(desc))) return;
+  try { FALTAS = await call('guardarfalta', { data, tecnico: nome, tipo, horas, notas: $('#fa_notas').value }); toast('✅ Falta registada'); } catch(e){}
+  vComissoes();
+}
+async function apagarFalta(id){ if (!confirm('Apagar esta falta?')) return; try { FALTAS = await call('apagarfalta', { id }); toast('Falta apagada'); } catch(e){} vComissoes(); }
 function segValores(){ return '<div class="seg" style="margin-bottom:10px">' + [['resumo','📊 Resumo'],['faturas','🧾 Faturas'],['comissoes','💼 Comissões']].map(([k,t])=>`<button class="${SUBV===k?'on':''}" onclick="SUBV='${k}';valores()">${t}</button>`).join('') + '</div>'; }
-function valores(){ if (SUBV==='faturas') return vFaturas(); if (SUBV==='comissoes') return vComissoes(); valoresResumo(); $('#app').insertAdjacentHTML('afterbegin', segValores()); }
+function valores(){ if (PAPEL==='tecnico') { SUBV='comissoes'; return vComissoes(); } if (SUBV==='faturas') return vFaturas(); if (SUBV==='comissoes') return vComissoes(); valoresResumo(); $('#app').insertAdjacentHTML('afterbegin', segValores()); }
 function vFaturas(){
   const pend = JOBS.filter(faturaPendente).sort((a,b)=>(a.data+a.hora).localeCompare(b.data+b.hora));
   const meses = {}; JOBS.filter(j=>fechado(j)&&j.fatura==='Sim'&&j.valor!==''&&j.valor!=null).forEach(j=>{ const m=j.data.slice(0,7); const o=meses[m]||(meses[m]={n:0,base:0,iva:0,pend:0}); o.n++; o.base+=Number(j.valor)||0; o.iva+=ivaDe(j); if(!j.faturaFeita) o.pend++; });
@@ -611,22 +642,23 @@ function vFaturas(){
 }
 async function faturaFeita(id){ const j = JOBS.find(x=>x.id===id); if(!j) return; setJobs(await call('guardar', { id, estado: j.estado, faturaFeita: hoje() })); toast('✅ Fatura marcada como feita'); vFaturas(); }
 async function vComissoes(){
-  $('#app').innerHTML = segValores() + '<div class="card vazio">A carregar…</div>';
-  try { COMS = await call('comissoes', {}, true); } catch(e){ COMS = COMS || []; }
+const ADM = PAPEL!=='tecnico', SEG = ADM ? segValores() : '';
+  $('#app').innerHTML = SEG + '<div class="card vazio">A carregar…</div>';
+  try { const [c1, f1] = await Promise.all([call('comissoes', {}, true), call('faltas', {}, true).catch(()=>FALTAS||[])]); COMS = c1; FALTAS = f1; } catch(e){ COMS = COMS || []; }
   if (TAB!=='valores' || SUBV!=='comissoes') return;
-  let html = segValores() + cartaoSalarios();
-  Object.keys(COMISSAO).forEach(nome => {
+let html = SEG + cartaoSalarios();
+  Object.keys(COMISSAO).filter(n=>ADM || n===NOME).forEach(nome => {
     const sem = {}; JOBS.forEach(j=>{ const c=comissaoDe(j,nome); if(c>0){ const s=segunda(j.data); (sem[s]=sem[s]||[]).push([j,c]); } });
     const semanas = Object.keys(sem).sort().reverse();
     html += `<h2>💼 Comissão do ${esc(nome)} (${Math.round(COMISSAO[nome]*100)}%)</h2><div class="hint" style="margin:-4px 4px 10px;color:var(--mu)">Só trabalhos depois das 17h, antes das 8h, sábados, domingos e feriados. Valor sem IVA menos o material. Trabalhos a dois contam o valor todo. Taxa de deslocação (orçamento recusado): 50% da taxa. Paga ao domingo (semana de segunda a domingo).</div>`;
     if (!semanas.length) html += '<div class="card vazio">Ainda sem comissões</div>';
     semanas.forEach(s => {
       const itens = sem[s], tot = r2(itens.reduce((t,x)=>t+x[1],0)), fim = new Date(Date.parse(s+'T12:00:00Z')+6*864e5).toISOString().slice(0,10);
-      const pg = (COMS||[]).find(c=>c.semana===s && c.tecnico===nome), dif = pg && Math.abs(pg.valor-tot) > 0.009;
+      const pg = (COMS||[]).find(c=>c.semana===s && c.tecnico===nome),dif = ADM && pg && Math.abs(pg.valor-tot) > 0.009;
       html += `<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><b>Semana ${s.slice(8)}/${s.slice(5,7)} a ${fim.slice(8)}/${fim.slice(5,7)}</b><b style="font-size:18px">${eur(tot)}</b></div>
         <table style="margin-top:6px">${itens.map(([j,c])=>`<tr><td>${j.data.slice(8)}/${j.data.slice(5,7)} ${esc(j.hora||'')}</td><td>${esc(j.nome)}${String(j.tecnico).includes('+')?' (a dois)':''}${Number(j.material)?' · material '+eur(j.material):''}</td><td class="r">${eur(c)}</td></tr>`).join('')}</table>
         ${pg ? `<div class="m" style="color:var(--ok);font-weight:600;margin-top:8px">✅ Pago ${eur(pg.valor)} em ${esc(pg.pagoEm)} (${esc(pg.pagoPor)})</div>${dif?`<div class="m bad">⚠️ O total mudou depois do pagamento (diferença ${eur(tot-pg.valor)})</div><div class="acts"><button class="pagar" onclick="pagarCom('${s}','${nome}',${tot},${itens.length})">Atualizar para ${eur(tot)}</button></div>`:''}`
-             : `<div class="acts"><button class="pagar" onclick="pagarCom('${s}','${nome}',${tot},${itens.length})">💶 Marcar como pago</button></div>`}</div>`;
+: ADM ? `<div class="acts"><button class="pagar" onclick="pagarCom('${s}','${nome}',${tot},${itens.length})">💶 Marcar como pago</button></div>` : '<div class="m" style="color:var(--mu);margin-top:8px">⏳ Por pagar (paga ao domingo)</div>'}</div>`;
     });
   });
   $('#app').innerHTML = html;

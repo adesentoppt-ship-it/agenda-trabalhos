@@ -49,7 +49,10 @@ case 'guardar': return visiveis_(u, guardar_(dados, u));
     case 'foto': return visiveis_(u, addFoto_(dados, u));      // juntar foto (fica no Google Drive)
     case 'verfoto': return verFoto_(dados, u);
     case 'apagarfoto': return visiveis_(u, apagarFoto_(dados, u));
-    case 'comissoes': if (papel !== 'admin') throw new Error('Sem acesso'); return comissoes_();
+case 'comissoes': return papel === 'admin' ? comissoes_() : comissoes_().filter(c => c.tecnico === u.nome || c.tecnico === u.nome + ' (salário)');
+    case 'faltas': return faltas_(u);
+    case 'guardarfalta': if (papel !== 'admin') throw new Error('Sem acesso'); return guardarFalta_(dados, u);
+    case 'apagarfalta': if (papel !== 'admin') throw new Error('Sem acesso'); return apagarFalta_(dados, u);
     case 'pagarcomissao': if (papel !== 'admin') throw new Error('Sem acesso'); return pagarComissao_(dados, u);
     case 'subscrever': return subscrever_(dados, u.nome); // ativar notificações neste telemóvel
 case 'aviso': return ultimoAviso_(u.nome); // texto da última notificação
@@ -685,13 +688,52 @@ function pagarComissao_(d, u) {
     const sh = folhaCom_(); const vals = sh.getDataRange().getDisplayValues();
     const agora = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm');
     const row = [sem, String(d.tecnico || ''), String(Math.round((Number(d.valor) || 0) * 100) / 100), String(d.trabalhos || ''), agora, u.nome];
-    for (let i = 1; i < vals.length; i++) if (vals[i][0] === sem && vals[i][1] === row[1]) { sh.getRange(i + 1, 1, 1, 6).setValues([row]); return comissoes_(); }
-    sh.appendRow(row); return comissoes_();
+let feito = false;
+    for (let i = 1; i < vals.length; i++) if (vals[i][0] === sem && vals[i][1] === row[1]) { sh.getRange(i + 1, 1, 1, 6).setValues([row]); feito = true; break; }
+    if (!feito) sh.appendRow(row);
+    if (/ \(salário\)$/.test(row[1])) marcarFaltas_(row[1].replace(' (salário)', ''), sem);
+    return comissoes_();
   } finally { lock.releaseLock(); }
 }
 /* ---------- LEMBRETE DE FATURAS: 24h depois de concluído, 1 vez por dia, até carregar em "Fatura feita" ---------- */
 /* ---------- SALÁRIOS: lembrete no dia do pagamento (e nos dias seguintes) até marcar como pago ---------- */
 const SALARIOS = [{ nome: 'Lucas', valor: 920, dia: 16 }];
+/* ---------- FALTAS: descontadas no próximo salário (valor/hora = salário × 12 ÷ 52 ÷ horas semanais) ---------- */
+const HORAS_SEMANA = 40;
+const TIPOS_FALTA = { 'Injustificada': true, 'Justificada sem pagamento': true, 'Justificada paga': false };
+const COLS_FALTA = ['id', 'data', 'tecnico', 'tipo', 'horas', 'desconto', 'notas', 'por', 'salario'];
+function folhaFaltas_() {
+  const ss = SpreadsheetApp.getActive(); let sh = ss.getSheetByName('Faltas');
+  if (!sh) { sh = ss.insertSheet('Faltas'); sh.getRange('A:I').setNumberFormat('@'); sh.getRange(1, 1, 1, COLS_FALTA.length).setValues([COLS_FALTA]).setFontWeight('bold'); sh.setFrozenRows(1); }
+  return sh;
+}
+function faltasTodas_() {
+  const sh = folhaFaltas_(); const n = sh.getLastRow() - 1; if (n < 1) return [];
+  const num = v => Number(String(v).replace(',', '.')) || 0;
+  return sh.getRange(2, 1, n, COLS_FALTA.length).getDisplayValues().map(r => ({ id: r[0], data: r[1], tecnico: r[2], tipo: r[3], horas: num(r[4]), desconto: num(r[5]), notas: r[6], por: r[7], salario: r[8] }));
+}
+function faltas_(u) { const f = faltasTodas_(); return u.papel === 'admin' ? f : f.filter(x => x.tecnico === u.nome); }
+function valorHora_(nome) { const s = SALARIOS.find(x => x.nome === nome); return s ? s.valor * 12 / (52 * HORAS_SEMANA) : 0; }
+function guardarFalta_(d, u) {
+  const data = String(d.data || ''); if (!/^\d{4}-\d{2}-\d{2}$/.test(data)) throw new Error('Data inválida');
+  const tec = String(d.tecnico || ''); if (!SALARIOS.some(s => s.nome === tec)) throw new Error('Técnico inválido');
+  const tipo = String(d.tipo || ''); if (!(tipo in TIPOS_FALTA)) throw new Error('Tipo de falta inválido');
+  const horas = Number(d.horas); if (!(horas > 0 && horas <= 248)) throw new Error('Horas inválidas');
+  const desc = TIPOS_FALTA[tipo] ? Math.round(horas * valorHora_(tec) * 100) / 100 : 0;
+  folhaFaltas_().appendRow([Utilities.getUuid().slice(0, 8), data, tec, tipo, String(horas), String(desc), String(d.notas || '').slice(0, 300), u.nome, '']);
+  return faltas_(u);
+}
+function apagarFalta_(d, u) {
+  const sh = folhaFaltas_(); const v = sh.getDataRange().getDisplayValues();
+  for (let i = v.length - 1; i >= 1; i--) if (v[i][0] === String(d.id)) { if (v[i][8]) throw new Error('Esta falta já foi descontada num salário pago'); sh.deleteRow(i + 1); break; }
+  return faltas_(u);
+}
+function marcarFaltas_(nome, chave) {
+  const sh = folhaFaltas_(); const v = sh.getDataRange().getDisplayValues();
+  for (let i = 1; i < v.length; i++) if (v[i][2] === nome && !v[i][8] && v[i][1] <= chave) sh.getRange(i + 1, 9).setValue(chave);
+}
+function descontoPendente_(nome, chave) { return faltasTodas_().filter(f => f.tecnico === nome && !f.salario && f.data <= chave).reduce((t, f) => t + f.desconto, 0); }
+
 function lembrarSalario_() {
   const tz = Session.getScriptTimeZone(), agora = new Date(), F = f => Utilities.formatDate(agora, tz, f);
   const hh = Number(F('H')); if (hh < 9 || hh >= 21) return;
@@ -701,7 +743,7 @@ function lembrarSalario_() {
     const chave = F('yyyy-MM') + '-' + String(s.dia).padStart(2, '0');
     if (comissoes_().some(c => c.semana === chave && c.tecnico === s.nome + ' (salário)')) return;
     const k = 'sal_' + s.nome + '_' + F('yyyy-MM-dd'); if (props.getProperty(k)) return; props.setProperty(k, '1');
-    notificar_(admins_(), '💶 Pagar salário do ' + s.nome + ': ' + s.valor.toFixed(2).replace('.', ',') + ' €', 'Dia ' + s.dia + '. Depois de pagar, marque como pago na app (Valores → Comissões).');
+    notificar_(admins_(), '💶 Pagar salário do ' + s.nome + ': ' +(s.valor - descontoPendente_(s.nome, chave)).toFixed(2).replace('.', ',') + ' €', 'Dia ' + s.dia + '. Depois de pagar, marque como pago na app (Valores → Comissões).');
   });
 }
 function lembrarFaturas_() {
