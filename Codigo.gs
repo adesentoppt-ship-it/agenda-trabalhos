@@ -177,7 +177,7 @@ let campos = papel === 'tecnico'
 if (papel === 'tecnico' && atual.tecnico && !tecs_(atual.tecnico).includes(u.nome)) throw new Error('Este trabalho é de ' + atual.tecnico);
     // o técnico pode dizer que fez o trabalho com outro (ex.: 'Lucas + Alex'), mas tem de se incluir a si próprio
     if (papel === 'tecnico' && d.tecnico !== undefined) {
-      const lista = tecs_(d.tecnico).filter(n => trabalhadores_().includes(n));
+const lista = tecs_(d.tecnico).filter(n => trabalhadores_().concat(EXTRAS_SRV).includes(n));
       if (!lista.includes(u.nome)) throw new Error('O técnico tem de estar incluído');
       t.tecnico = lista.join(' + ');
     }
@@ -519,13 +519,15 @@ return finTudo_();
 
 /* Liga a conclusão de um trabalho às finanças: cria/atualiza/remove o movimento "job-<id>" */
 /* ---------- TRABALHO REPASSADO: tira a comissão do técnico e divide o resto a meio ---------- */
-const COMISSAO_SRV = { 'Lucas': 0.10 };
+const COMISSAO_SRV = { 'Lucas': 0.10, 'Lukinhas': 0.10 };
+const EXTRAS_SRV = ['Lukinhas']; /* técnicos sem app (só comissão) */
 function pascoaSrv_(y) { const a=y%19,b=Math.floor(y/100),c=y%100,d=Math.floor(b/4),e=b%4,f=Math.floor((b+8)/25),g=Math.floor((b-f+1)/3),h=(19*a+b-d-g+15)%30,i=Math.floor(c/4),k=c%4,l=(32+2*e+2*i-h-k)%7,m=Math.floor((a+11*h+22*l)/451),mes=Math.floor((h+l-7*m+114)/31),dia=((h+l-7*m+114)%31)+1; return Date.UTC(y,mes-1,dia); }
 function feriadoSrv_(ds) { const y = +ds.slice(0,4), p = pascoaSrv_(y), f = n => new Date(p + n*864e5).toISOString().slice(0,10);
   return ['01-01','04-25','05-01','06-10','08-15','10-05','11-01','12-01','12-08','12-25'].map(x => y+'-'+x).concat([f(-2), f(0), f(60)]).indexOf(ds) >= 0; }
 function foraHorasSrv_(t) { if (!t.data) return false; const dow = new Date(t.data+'T12:00:00Z').getUTCDay(); if (dow===0 || dow===6 || feriadoSrv_(t.data)) return true; const hh = parseInt(String(t.hora||'12'),10); return hh < 8 || hh >= 17; }
-function comissaoSrv_(t) { const tecs = tecs_(t.tecnico); let tot = 0;
-  Object.keys(COMISSAO_SRV).forEach(n => { if (tecs.indexOf(n) >= 0 && foraHorasSrv_(t)) tot += Math.max(0, (Number(t.valor)||0) - (Number(t.material)||0)) * (t.estado === 'Orçamento recusado' ? 0.5 : COMISSAO_SRV[n]) /* taxa de deslocação: 50% */; });
+function comissaoSrv_(t) { const tecs = tecs_(t.tecnico).filter(n => COMISSAO_SRV[n]); if (!tecs.length || !foraHorasSrv_(t)) return 0;
+  const base = Math.max(0, (Number(t.valor)||0) - (Number(t.material)||0));
+  const tot = t.estado === 'Orçamento recusado' ? base * 0.5 /* taxa: metade, dividida entre os técnicos */ : tecs.reduce((s, n) => s + base * COMISSAO_SRV[n], 0);
   return Math.round(tot*100)/100; }
 function parteEmpresa_(t) { const v = Number(t.valor) || 0; if (t.origem !== 'Trabalho repassado') return Math.round(v*100)/100; return Math.round((v - comissaoSrv_(t)) / 2 * 100) / 100; }
 
