@@ -216,7 +216,7 @@ $('#pin').addEventListener('keydown', e => { if(e.key==='Enter') entrar(e.target
 function mostrarApp(){
 $('#quem').textContent = NOME ? ' · ' + NOME : '';
 $('#nav').style.display='flex'; $('#sair').style.display='block';
-document.querySelectorAll('nav button[data-t=novo], nav button[data-t=valores]').forEach(b=>b.style.display = PAPEL==='tecnico' && !(b.dataset.t==='valores' && (COMISSAO[NOME] || SALARIOS.some(s=>s.nome===NOME))) ? 'none' : '');
+document.querySelectorAll('nav button[data-t=novo], nav button[data-t=valores]').forEach(b=>b.style.display = PAPEL==='tecnico' ? 'none' : '');
 const bf = document.querySelector('nav button[data-t=financas]'); if (bf) bf.style.display = PODE_FINANCAS ? '' : 'none';
 }
 async function entrar(p){
@@ -295,7 +295,7 @@ html += `<h2>Orçamentos dados</h2>` + (orc.length ? orc.map(cartao).join('') : 
 const ant = l.filter(j=>j.data<h).sort(ord).reverse();
 html += `<h2>Anteriores</h2>` + (ant.length ? ant.map(cartao).join('') : `<div class="card vazio">Sem trabalhos anteriores</div>`);
 }
-$('#lista').innerHTML = html + '<div style="text-align:center;font-size:11px;color:var(--mu);margin:18px 0 4px">versão 23 · 05/10</div>';
+$('#lista').innerHTML = html + '<div style="text-align:center;font-size:11px;color:var(--mu);margin:18px 0 4px">versão 24 · 07/10</div>';
 }
 
 /* ---------- formulário ---------- */
@@ -308,14 +308,15 @@ const opt = (arr, v) => arr.map(o=>`<option ${o===v?'selected':''}>${o}</option>
 const fat = j.fatura === 'Sim';
 ORCS = (j.orcamentos||[]).map(o=>({d:o.d||'', v:o.v===''||o.v==null?'':String(o.v), a:!!o.a}));
 const v0 = (j.valor===''||j.valor==null) ? '' : j.valor;
+const OCULTO = PAPEL==='tecnico' && j.temValor; /* o técnico não vê o valor depois de o pôr */
 return `<div id="blocoOrc" style="display:${j.estado==='Orçamento dado'?'block':'none'}">
 <label>Orçamentos dados ao cliente</label><div id="orcLista"></div>
 <button type="button" class="addorc" onclick="addOrc()">+ Adicionar orçamento</button></div>
 <div id="blocoValor" style="display:${fechado(j)?'block':'none'}">
 <div id="orcAceites"></div>
-<div class="row"><div><label id="lblValor">Valor do trabalho, sem IVA (€)</label><input id="f_valor" inputmode="decimal" value="${esc(v0)}" placeholder="0,00" oninput="contaIva()"></div>
+<div class="row">${OCULTO ? '<div><label>Valor do trabalho</label><div class="m" style="padding:10px 0;color:var(--ok);font-weight:600">✅ Já registado</div><input id="f_valor" type="hidden" value=""></div>' : `<div><label id="lblValor">Valor do trabalho, sem IVA (€)</label><input id="f_valor" inputmode="decimal" value="${esc(v0)}" placeholder="0,00" oninput="contaIva()"></div>`}
 <div><label>Pagamento</label>${selPagamento(j)}</div></div>
-<label>🧰 Material comprado para este trabalho (€) <span style="font-size:12px">— desconta na comissão</span></label><input id="f_material" inputmode="decimal" value="${esc(j.material||'')}" placeholder="0,00 (se não comprou, deixe vazio)">
+${OCULTO ? '<input id="f_material" type="hidden" value="">' : `<label>🧰 Material comprado para este trabalho (€) ${PAPEL==='tecnico' ? '' : '<span style="font-size:12px">— desconta na comissão</span>'}</label><input id="f_material" inputmode="decimal" value="${esc(j.material||'')}" placeholder="0,00 (se não comprou, deixe vazio)">`}
 <label>O cliente quer fatura?</label>
 <select id="f_fatura" onchange="mostrarFatura()">${opt(['Não','Sim'], fat?'Sim':'Não')}</select>
 <div id="ivaInfo" class="ivainfo"></div>
@@ -421,7 +422,7 @@ if (s) $('#f_valor').value = String(r2(s)).replace('.',',');
 contaIva();
 }
 function contaIva(){
-const el = $('#ivaInfo'); if (!el) return;
+const el = $('#ivaInfo'); if (!el) return; if ($('#f_valor') && $('#f_valor').type==='hidden') { el.textContent = ''; return; }
 const v = Number(($('#f_valor').value||'').replace(',', '.'));
 if (!v) { el.textContent = 'Coloque o valor do trabalho.'; return; }
 if ($('#f_fatura').value === 'Sim') {
@@ -653,7 +654,7 @@ async function guardarVale(nome){
 }
 async function apagarFalta(id){ if (!confirm('Apagar este registo?')) return; try { FALTAS = await call('apagarfalta', { id }); toast('Falta apagada'); } catch(e){} vComissoes(); }
 function segValores(){ return '<div class="seg" style="margin-bottom:10px">' + [['resumo','📊 Resumo'],['faturas','🧾 Faturas'],['comissoes','💼 Comissões']].map(([k,t])=>`<button class="${SUBV===k?'on':''}" onclick="SUBV='${k}';valores()">${t}</button>`).join('') + '</div>'; }
-function valores(){ if (PAPEL==='tecnico') { SUBV='comissoes'; return vComissoes(); } if (SUBV==='faturas') return vFaturas(); if (SUBV==='comissoes') return vComissoes(); valoresResumo(); $('#app').insertAdjacentHTML('afterbegin', segValores()); }
+function valores(){if (PAPEL==='tecnico') return ir('agenda'); if (SUBV==='faturas') return vFaturas(); if (SUBV==='comissoes') return vComissoes(); valoresResumo(); $('#app').insertAdjacentHTML('afterbegin', segValores()); }
 function vFaturas(){
   const pend = JOBS.filter(faturaPendente).sort((a,b)=>(a.data+a.hora).localeCompare(b.data+b.hora));
   const meses = {}; JOBS.filter(j=>fechado(j)&&j.fatura==='Sim'&&j.valor!==''&&j.valor!=null).forEach(j=>{ const m=j.data.slice(0,7); const o=meses[m]||(meses[m]={n:0,base:0,iva:0,pend:0}); o.n++; o.base+=Number(j.valor)||0; o.iva+=ivaDe(j); if(!j.faturaFeita) o.pend++; });

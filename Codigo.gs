@@ -49,9 +49,9 @@ case 'guardar': return visiveis_(u, guardar_(dados, u));
     case 'foto': return visiveis_(u, addFoto_(dados, u));      // juntar foto (fica no Google Drive)
     case 'verfoto': return verFoto_(dados, u);
     case 'apagarfoto': return visiveis_(u, apagarFoto_(dados, u));
-case 'comissoes': return papel === 'admin' ? comissoes_() : comissoes_().filter(c => c.tecnico === u.nome || c.tecnico === u.nome + ' (salário)');
+case 'comissoes': if (papel !== 'admin') throw new Error('Sem acesso'); return comissoes_();
 case 'contas': if (papel !== 'admin') throw new Error('Sem acesso'); return contasPagamento_();
-    case 'faltas': return faltas_(u);
+case 'faltas': if (papel !== 'admin') throw new Error('Sem acesso'); return faltas_(u);
     case 'guardarfalta': if (papel !== 'admin') throw new Error('Sem acesso'); return guardarFalta_(dados, u);
     case 'apagarfalta': if (papel !== 'admin') throw new Error('Sem acesso'); return apagarFalta_(dados, u);
     case 'pagarcomissao': if (papel !== 'admin') throw new Error('Sem acesso'); return pagarComissao_(dados, u);
@@ -87,7 +87,7 @@ function admins_() { return UTILIZADORES.filter(x => x.papel === 'admin').map(x 
 /* Um técnico só vê os trabalhos dele e os que ainda não têm técnico */
 function visiveis_(u, jobs) {
 // o técnico não vê de onde veio o trabalho (origem)
-  return u.papel === 'admin' ? jobs : jobs.filter(j => !j.tecnico || tecs_(j.tecnico).includes(u.nome)).map(j => { const o = Object.assign({}, j); delete o.origem; return o; });
+  return u.papel === 'admin' ? jobs : jobs.filter(j => !j.tecnico || tecs_(j.tecnico).includes(u.nome)).map(j => { const o = Object.assign({}, j);delete o.origem; o.temValor = !(j.valor === '' || j.valor == null); ['valor', 'iva', 'total', 'material'].forEach(k => delete o[k]); return o; /* o técnico não vê valores */ });
 }
 
 /* ---------- folha ---------- */
@@ -168,7 +168,8 @@ let campos = papel === 'tecnico'
 ? ['estado', 'valor', 'pagamento', 'notas', 'fatura', 'material']
 : ['data', 'hora', 'duracao', 'nome', 'nif', 'morada', 'telefone', 'servico',
 'tecnico', 'estado', 'valor', 'pagamento', 'notas', 'fatura', 'pagoEm', 'origem', 'material', 'faturaFeita'];
-    if (papel === 'tecnico' && d.fatura === 'Sim') campos = campos.concat(['nif', 'nome']);
+if (papel === 'tecnico' && d.fatura === 'Sim') campos = campos.concat(['nif', 'nome']);
+    if (papel === 'tecnico' && String(atual.valor || '') !== '') campos = campos.filter(k => k !== 'valor' && k !== 'material'); /* o técnico só põe o valor uma vez */
     // "Por pagar": só a Mariana ou o Alex (admin) marcam como pago
     if (papel === 'tecnico' && atual.pagamento === 'Por pagar' && d.pagamento !== undefined && d.pagamento !== 'Por pagar')
       throw new Error('Só a Mariana ou o Alex podem marcar como pago');
