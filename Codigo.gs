@@ -807,9 +807,27 @@ function lembrarSalario_() {
     notificar_(admins_(), '💶 Pagar salário do ' + s.nome + ': ' +(s.valor - descontoPendente_(s.nome, chave)).toFixed(2).replace('.', ',') + ' €', 'Dia ' + s.dia + '. Depois de pagar, marque como pago na app (Valores → Comissões).');
   });
 }
+/* ---------- IVA TRIMESTRAL: lembrete aos donos no mês de entrega (declaração até dia 20, pagamento até dia 25) ---------- */
+function ivaTrimestre_(ano, tri) {
+  const de = ano + '-' + String((tri - 1) * 3 + 1).padStart(2, '0'), ate = ano + '-' + String(tri * 3).padStart(2, '0');
+  return listar_().filter(j => (j.estado === 'Concluído' || j.estado === 'Orçamento recusado') && j.fatura === 'Sim' && String(j.data).slice(0, 7) >= de && String(j.data).slice(0, 7) <= ate)
+    .reduce((s, j) => s + (Number(String(j.iva).replace(',', '.')) || (Number(j.valor) || 0) * IVA_TAXA), 0);
+}
+function lembrarIva_() {
+  const tz = Session.getScriptTimeZone(), agora = new Date(), F = f => Utilities.formatDate(agora, tz, f);
+  const hh = Number(F('H')); if (hh < 9 || hh >= 21) return;
+  const mes = Number(F('M')), dia = Number(F('d')), ano = Number(F('yyyy'));
+  if ([2, 5, 8, 11].indexOf(mes) < 0 || [1, 10, 15, 19, 20, 24, 25].indexOf(dia) < 0) return;
+  const props = PropertiesService.getScriptProperties(), k = 'iva_' + F('yyyy-MM-dd'); if (props.getProperty(k)) return; props.setProperty(k, '1');
+  const tri = mes === 2 ? 4 : (mes - 2) / 3, anoT = mes === 2 ? ano - 1 : ano;
+  const v = Math.round(ivaTrimestre_(anoT, tri) * 100) / 100; if (!v) return;
+  const quando = dia <= 20 ? 'Declaração até dia 20, pagamento até dia 25.' : 'Pagamento até dia 25.';
+  notificar_(admins_(), '🧾 IVA do ' + tri + 'º trimestre de ' + anoT + ': ' + v.toFixed(2).replace('.', ',') + ' €', quando + ' Fale com o contabilista.');
+}
 function lembrarFaturas_() {
 try { lembrarSalario_(); } catch (e) {}
-  try { atualizarCdi_(); } catch (e) {}
+try { atualizarCdi_(); } catch (e) {}
+  try { lembrarIva_(); } catch (e) {}
   const tz = Session.getScriptTimeZone(), hoje = Utilities.formatDate(new Date(), tz, 'yyyy-MM-dd');
   const hh = Number(Utilities.formatDate(new Date(), tz, 'H')); if (hh < 9 || hh >= 21) return;
   const sh = folha_(); const n = sh.getLastRow() - 1; if (n < 1) return;
