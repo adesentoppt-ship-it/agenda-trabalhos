@@ -295,7 +295,7 @@ html += `<h2>Orçamentos dados</h2>` + (orc.length ? orc.map(cartao).join('') : 
 const ant = l.filter(j=>j.data<h).sort(ord).reverse();
 html += `<h2>Anteriores</h2>` + (ant.length ? ant.map(cartao).join('') : `<div class="card vazio">Sem trabalhos anteriores</div>`);
 }
-$('#lista').innerHTML = html + '<div style="text-align:center;font-size:11px;color:var(--mu);margin:18px 0 4px">versão 25 · 16/10</div>';
+$('#lista').innerHTML = html + '<div style="text-align:center;font-size:11px;color:var(--mu);margin:18px 0 4px">versão 26 · 25/10</div>';
 }
 
 /* ---------- formulário ---------- */
@@ -792,6 +792,25 @@ function cartaoLucro(){
     ${linha(`Semana ${seg.slice(8)}/${seg.slice(5,7)} a ${dom.slice(8)}/${dom.slice(5,7)}`, soma(d=>d>=seg && d<=dom), r2(salMes*12/52), r2(META_LUCRO_MES*12/52))}
     ${linha('Mês', soma(d=>d.slice(0,7)===mes), salMes, META_LUCRO_MES)}</div>`;
 }
+/* ---------- HISTÓRICO DAS METAS: cada semana e cada mês desde o início (calculado dos movimentos guardados) ---------- */
+function cartaoHistorico(){
+  const contas = (FIN.contas||[]).filter(c=>String(c.moeda||'EUR').toUpperCase()!=='BRL'), ids = new Set(contas.map(c=>c.id));
+  const salMes = SALARIOS.reduce((t,s)=>t+s.valor,0), salSem = r2(salMes*12/52), metaSem = r2(META_LUCRO_MES*12/52);
+  const soma = f => { let e = 0, s = 0; (FIN.movimentos||[]).forEach(m => { const d = String(m.data||'').slice(0,10); if (!ids.has(m.contaId) || !f(d)) return;
+      if (m.tipo==='Saída' && /^(pag-.*sal|vale-)/i.test(String(m.id||''))) return;
+      const v = Number(String(m.valor).replace(',','.'))||0; if (m.tipo==='Entrada') e += v; else if (m.tipo==='Saída') s += v; }); return { e:r2(e), s:r2(s) }; };
+  const ic = (l, meta) => l < 0 ? '🔴' : l < meta ? '🟠' : '🟢';
+  const hoje = new Date().toLocaleDateString('sv'), mais = (d, n) => new Date(Date.parse(d+'T12:00:00Z')+n*864e5).toISOString().slice(0,10), dm = d => d.slice(8)+'/'+d.slice(5,7);
+  const sems = []; for (let s = segunda(INICIO_FIN.data); s <= hoje; s = mais(s, 7)) { const f = mais(s, 6), r = soma(d=>d>=s && d<=f), l = r2(r.e - r.s - salSem); sems.push({ t: `${dm(s)} a ${dm(f)}`, l, ok: l >= metaSem, atual: hoje <= f, m: metaSem, r }); }
+  const meses = []; let m = '2026-10'; while (m <= hoje.slice(0,7)) { const mm = m, r = soma(d=>d.slice(0,7)===mm), l = r2(r.e - r.s - salMes); const nome = new Date(mm+'-15T12:00:00Z').toLocaleDateString('pt-PT',{month:'long', year:'numeric'}); meses.push({ t: nome.charAt(0).toUpperCase()+nome.slice(1), l, ok: l >= META_LUCRO_MES, atual: mm === hoje.slice(0,7), m: META_LUCRO_MES, r }); const [y, x] = mm.split('-').map(Number); m = x === 12 ? (y+1)+'-01' : y+'-'+String(x+1).padStart(2,'0'); }
+  const tab = l => `<table style="margin-top:6px">${l.slice().reverse().map(o=>`<tr><td>${o.t}${o.atual?' <span class="m">(em curso)</span>':''}<div class="m">Entradas ${eur(o.r.e)} · gastos ${eur(o.r.s)}</div></td><td class="r"><b style="color:${o.l<0?'var(--bad,#d33)':'var(--ok)'}">${sinal(o.l)}</b></td><td class="r">${ic(o.l, o.m)}</td></tr>`).join('')}</table>`;
+  const fechadas = l => l.filter(o=>!o.atual), conta = l => `${fechadas(l).filter(o=>o.ok).length} de ${fechadas(l).length}`;
+  return `<div class="card"><details open><summary><b>📅 Histórico das metas</b></summary>
+    <div class="m" style="margin-top:6px">🟢 meta atingida · 🟠 lucro abaixo da meta · 🔴 no vermelho. Lucro = entradas − gastos − salário do Lucas.</div>
+    <div style="margin-top:10px"><b>Meses</b> <span class="m">(meta ${eur(META_LUCRO_MES)} · atingida em ${conta(meses)} meses fechados)</span></div>${tab(meses)}
+    <div style="margin-top:12px"><b>Semanas</b> <span class="m">(meta ${eur(metaSem)} · atingida em ${conta(sems)} semanas fechadas)</span></div>${tab(sems)}
+  </details></div>`;
+}
 function renderFinancas(){
 if (!FIN) return financas();
 const contas = FIN.contas||[], bens = FIN.bens||[], movs = FIN.movimentos||[];
@@ -813,7 +832,7 @@ const rCasa = resumoArea('Casa'), rServico = resumoArea('Serviço');
 const v = n => FIN_OCULTAR ? '••••' : eur(n);
 
 const difIni = r2(contas.reduce((s,c)=>s+paraEur(c),0) - INICIO_FIN.eur - (eurbrl ? INICIO_FIN.brl/eurbrl : 0));
-$('#app').innerHTML = `${cartaoLucro()}
+$('#app').innerHTML = `${cartaoLucro()}${cartaoHistorico()}
 <div class="card kpi" style="text-align:center">
 <div class="l" style="display:flex;justify-content:center;align-items:center;gap:8px">Património total <span onclick="FIN_OCULTAR=!FIN_OCULTAR;renderFinancas()" style="cursor:pointer">${FIN_OCULTAR?'🙈':'👁️'}</span></div>
 <div class="v" style="font-size:28px">${v(total)}</div>
