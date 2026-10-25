@@ -295,7 +295,7 @@ html += `<h2>Orçamentos dados</h2>` + (orc.length ? orc.map(cartao).join('') : 
 const ant = l.filter(j=>j.data<h).sort(ord).reverse();
 html += `<h2>Anteriores</h2>` + (ant.length ? ant.map(cartao).join('') : `<div class="card vazio">Sem trabalhos anteriores</div>`);
 }
-$('#lista').innerHTML = html + '<div style="text-align:center;font-size:11px;color:var(--mu);margin:18px 0 4px">versão 27 · 25/10</div>';
+$('#lista').innerHTML = html + '<div style="text-align:center;font-size:11px;color:var(--mu);margin:18px 0 4px">versão 28 · 25/10</div>';
 }
 
 /* ---------- formulário ---------- */
@@ -781,6 +781,13 @@ function linhaIva(){
     out += `<div class="m" style="margin-top:6px;font-weight:600;color:#e08a00">🧾 IVA a entregar (${t+1}º trimestre ${ano}): ${eur(v)} — pagar até ${prazo.slice(8)}/${prazo.slice(5,7)}/${prazo.slice(0,4)}. Não é teu: está dentro dos saldos.</div>`; });
   return out;
 }
+/* IVA já recebido dos clientes e ainda por entregar (trimestres em aberto) */
+function ivaRecebidoPorEntregar(){ const h = new Date(), hoje = h.toLocaleDateString('sv'), y = h.getFullYear(), q = Math.floor(h.getMonth()/3); let v = 0;
+  [q-1, q].forEach(k => { const ano = k < 0 ? y-1 : y, t = (k+4)%4; const de = ano+'-'+String(t*3+1).padStart(2,'0'), ate = ano+'-'+String(t*3+3).padStart(2,'0');
+    const pa = t === 3 ? ano+1 : ano, pm = t === 3 ? 2 : t*3+5, prazo = pa+'-'+String(pm).padStart(2,'0')+'-25'; if (prazo < hoje) return;
+    v += (JOBS||[]).filter(j=>fechado(j) && j.pagamento!=='Por pagar' && String(j.data).slice(0,7)>=de && String(j.data).slice(0,7)<=ate).reduce((s,j)=>s+ivaDe(j),0); });
+  return r2(v); }
+function linhaComSemIva(total){ const iva = ivaRecebidoPorEntregar(); if (!iva) return ''; return `<div class="m" style="margin-top:4px">Com IVA: <b>${eur(total)}</b> · Sem IVA: <b>${eur(r2(total-iva))}</b> <span style="font-size:12px">(IVA já recebido dos clientes: ${eur(iva)})</span></div>`; }
 function cartaoLucro(){
   const contas = (FIN.contas||[]).filter(c=>String(c.moeda||'EUR').toUpperCase()!=='BRL');
   const ids = new Set(contas.map(c=>c.id)), total = r2(contas.reduce((t,c)=>t+(Number(c.saldo)||0),0));
@@ -798,7 +805,7 @@ function cartaoLucro(){
       <div class="m" style="color:${cor};font-weight:600">${est}</div></div>`; };
   return `<div class="card"><div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><b>💶 Total em euros</b><b style="font-size:20px">${eur(total)}</b></div>
     <div class="m" style="font-weight:600;color:${total-INICIO_FIN.eur<0?'var(--bad,#d33)':'var(--ok)'}">Desde o início (30/09): ${sinal(r2(total-INICIO_FIN.eur))}</div>
-<div class="m">${contas.map(c=>esc(c.nome)+' '+eur(c.saldo)).join(' · ')}</div>${linhaIva()}
+<div class="m">${contas.map(c=>esc(c.nome)+' '+eur(c.saldo)).join(' · ')}</div>${linhaIva()}${linhaComSemIva(total)}
     ${linha(`Semana ${seg.slice(8)}/${seg.slice(5,7)} a ${dom.slice(8)}/${dom.slice(5,7)}`, soma(d=>d>=seg && d<=dom), r2(salMes*12/52), r2(META_LUCRO_MES*12/52))}
     ${linha('Mês', soma(d=>d.slice(0,7)===mes), salMes, META_LUCRO_MES)}</div>`;
 }
