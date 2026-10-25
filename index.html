@@ -295,7 +295,7 @@ html += `<h2>Orçamentos dados</h2>` + (orc.length ? orc.map(cartao).join('') : 
 const ant = l.filter(j=>j.data<h).sort(ord).reverse();
 html += `<h2>Anteriores</h2>` + (ant.length ? ant.map(cartao).join('') : `<div class="card vazio">Sem trabalhos anteriores</div>`);
 }
-$('#lista').innerHTML = html + '<div style="text-align:center;font-size:11px;color:var(--mu);margin:18px 0 4px">versão 28 · 25/10</div>';
+$('#lista').innerHTML = html + '<div style="text-align:center;font-size:11px;color:var(--mu);margin:18px 0 4px">versão 29 · 25/10</div>';
 }
 
 /* ---------- formulário ---------- */
@@ -835,7 +835,7 @@ const eurbrl = Number(FIN.cambio && FIN.cambio.eurbrl) || 0;
 const totalBens = bens.reduce((s,b)=>s+(Number(b.valor)||0),0);
 // os bens (carrinhas, equipamento, coisas de casa) estão todos em Portugal
 const porPais = pais => contas.filter(c=>(c.pais||'Portugal')===pais).reduce((s,c)=>s+paraEur(c),0) + (pais==='Portugal' ? totalBens : 0);
-const totalPT = porPais('Portugal'), totalBR = porPais('Brasil');
+const ivaFora = ivaRecebidoPorEntregar(), totalPT = porPais('Portugal') - ivaFora, totalBR = porPais('Brasil'); /* património sempre sem o IVA que é do Estado */
 const total = totalPT + totalBR;
 
 const mesesSet = new Set(movs.map(m=>m.data.slice(0,7))); mesesSet.add(FIN_MES);
@@ -848,11 +848,12 @@ s: movsMes.filter(m=>m.area===area&&m.tipo==='Saída').reduce((s,m)=>s+Number(m.
 const rCasa = resumoArea('Casa'), rServico = resumoArea('Serviço');
 const v = n => FIN_OCULTAR ? '••••' : eur(n);
 
-const difIni = r2(contas.reduce((s,c)=>s+paraEur(c),0) - INICIO_FIN.eur - (eurbrl ? INICIO_FIN.brl/eurbrl : 0));
+const difIni = r2(contas.reduce((s,c)=>s+paraEur(c),0) - ivaFora - INICIO_FIN.eur - (eurbrl ? INICIO_FIN.brl/eurbrl : 0));
 $('#app').innerHTML = `${cartaoLucro()}${cartaoHistorico()}
 <div class="card kpi" style="text-align:center">
 <div class="l" style="display:flex;justify-content:center;align-items:center;gap:8px">Património total <span onclick="FIN_OCULTAR=!FIN_OCULTAR;renderFinancas()" style="cursor:pointer">${FIN_OCULTAR?'🙈':'👁️'}</span></div>
 <div class="v" style="font-size:28px">${v(total)}</div>
+${ivaFora ? `<div class="m">Sem IVA — já descontados ${FIN_OCULTAR ? '••••' : eur(ivaFora)} de IVA a entregar</div>` : ''}
 <div class="m" style="font-weight:600;color:${difIni<0?'var(--bad,#d33)':'var(--ok)'}">Desde o início (30/09): ${FIN_OCULTAR ? '••••' : sinal(difIni)}</div>
 </div>
 <div class="kpis">
