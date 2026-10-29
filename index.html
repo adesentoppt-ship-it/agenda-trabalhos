@@ -256,6 +256,7 @@ return `<div class="card job" onclick="editar('${j.id}')">
 <div class="n">${esc(j.nome)}</div>
 <div class="m">${esc(j.servico||'')}${j.tecnico?' · 👷 '+esc(j.tecnico):''}${PAPEL==='admin'&&j.origem?' · 📣 '+esc(j.origem):''}${PAPEL==='admin'&&entregarDe(j)?' · 🤝 entregar '+eur(entregarDe(j)):''}</div>
 ${j.morada?`<div class="m">${esc(j.morada)}</div>`:''}
+${PAPEL==='admin' && j.criado ? `<div class="m" style="font-size:12px">🕒 Marcado em ${esc(String(j.criado).slice(8,10))}/${esc(String(j.criado).slice(5,7))} às ${esc(String(j.criado).slice(11,16))}</div>` : ''}
 ${fechado(j)&&j.valor!==''&&j.valor!=null?`<div class="m"><b style="color:var(--tx)">${eur(totalDe(j))}</b>${j.fatura==='Sim'?` <span style="font-size:12px">(${eur(j.valor)} + IVA ${eur(ivaDe(j))})</span> · 🧾 Fatura`:''}${j.pagamento&&j.pagamento!=='Por pagar'?'· '+esc(j.pagamento):''}</div>`:''}
 ${j.estado==='Orçamento dado'&&(j.orcamentos||[]).length?`<div class="m">💬 ${j.orcamentos.length>1?j.orcamentos.length+' orçamentos':'Orçamento'}: ${j.orcamentos.map(o=>`${o.d?esc(o.d)+' ':''}<b style="color:var(--tx)">${eur(o.v)}</b>`).join(' · ')}</div>`:''}
     ${porPagar?`<div class="m" style="color:var(--av);font-weight:600">⏳ Por pagar — o cliente paga depois</div>`:''}
@@ -295,7 +296,7 @@ html += `<h2>Orçamentos dados</h2>` + (orc.length ? orc.map(cartao).join('') : 
 const ant = l.filter(j=>j.data<h).sort(ord).reverse();
 html += `<h2>Anteriores</h2>` + (ant.length ? ant.map(cartao).join('') : `<div class="card vazio">Sem trabalhos anteriores</div>`);
 }
-$('#lista').innerHTML = html + '<div style="text-align:center;font-size:11px;color:var(--mu);margin:18px 0 4px">versão 29 · 25/10</div>';
+$('#lista').innerHTML = html + '<div style="text-align:center;font-size:11px;color:var(--mu);margin:18px 0 4px">versão 30 · 29/10</div>';
 }
 
 /* ---------- formulário ---------- */
