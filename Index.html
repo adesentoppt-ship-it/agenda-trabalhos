@@ -296,7 +296,7 @@ html += `<h2>Orçamentos dados</h2>` + (orc.length ? orc.map(cartao).join('') : 
 const ant = l.filter(j=>j.data<h).sort(ord).reverse();
 html += `<h2>Anteriores</h2>` + (ant.length ? ant.map(cartao).join('') : `<div class="card vazio">Sem trabalhos anteriores</div>`);
 }
-$('#lista').innerHTML = html + '<div style="text-align:center;font-size:11px;color:var(--mu);margin:18px 0 4px">versão 31 · 31/10</div>';
+$('#lista').innerHTML = html + '<div style="text-align:center;font-size:11px;color:var(--mu);margin:18px 0 4px">versão 32 · 07/11</div>';
 }
 
 /* ---------- formulário ---------- */
@@ -685,8 +685,8 @@ let html = SEG + cartaoSalarios();
       const pg = (COMS||[]).find(c=>c.semana===s && c.tecnico===nome),dif = ADM && pg && Math.abs(pg.valor-tot) > 0.009;
       html += `<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><b>Semana ${s.slice(8)}/${s.slice(5,7)} a ${fim.slice(8)}/${fim.slice(5,7)}</b><b style="font-size:18px">${eur(tot)}</b></div>
         <table style="margin-top:6px">${itens.map(([j,c])=>`<tr><td>${j.data.slice(8)}/${j.data.slice(5,7)} ${esc(j.hora||'')}</td><td>${esc(j.nome)}${String(j.tecnico).includes('+')?' (a dois)':''}${Number(j.material)?' · material '+eur(j.material):''}</td><td class="r">${eur(c)}</td></tr>`).join('')}</table>
-        ${pg ? `<div class="m" style="color:var(--ok);font-weight:600;margin-top:8px">✅ Pago ${eur(pg.valor)} em ${esc(pg.pagoEm)} (${esc(pg.pagoPor)})</div>${dif?`<div class="m bad">⚠️ O total mudou depois do pagamento (diferença ${eur(tot-pg.valor)})</div><div class="acts"><button class="pagar" onclick="pagarCom('${s}','${nome}',${tot},${itens.length})">Atualizar para ${eur(tot)}</button></div>`:''}`
-: ADM ? `<div class="acts"><button class="pagar" onclick="pagarCom('${s}','${nome}',${tot},${itens.length})">💶 Marcar como pago</button></div>` : '<div class="m" style="color:var(--mu);margin-top:8px">⏳ Por pagar (paga ao domingo)</div>'}</div>`;
+        ${pg ? `<div class="m" style="color:var(--ok);font-weight:600;margin-top:8px">✅ Pago ${eur(pg.valor)} em ${esc(pg.pagoEm)} (${esc(pg.pagoPor)})</div>${dif?`<div class="m bad">⚠️ O total mudou depois do pagamento (diferença ${eur(tot-pg.valor)})</div>`:''}`
+: '<div class="m" style="color:var(--mu);margin-top:8px">⏳ Por pagar (paga ao domingo)</div>'}</div>`;
     });
   });
   $('#app').innerHTML = html;
