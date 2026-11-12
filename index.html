@@ -89,7 +89,7 @@ td,th{padding:7px 4px;border-bottom:1px solid var(--bd);text-align:left}td.r,th.
 <nav id="nav" style="display:none">
 <button data-t="agenda" class="on" onclick="ir('agenda')"><b>📅</b>Agenda</button>
 <button data-t="novo" onclick="novo()"><b>➕</b>Novo</button>
-<button data-t="valores" onclick="ir('valores')"><b>💶</b>Valores</button>
+<button data-t="valores" onclick="ir('valores')"><b>💶</b>Valores</button> <button data-t="precos" onclick="ir('precos')"><b>💲</b>Preços</button>
 <button data-t="financas" onclick="ir('financas')"><b>💰</b>Finanças</button>
 </nav>
 <div id="toast"></div>
@@ -241,8 +241,24 @@ else if (!temCache) ecraLogin(e.message);
 function sair(){ try{localStorage.removeItem('pin'); localStorage.removeItem('cache')}catch(e){} PIN=''; NOME=''; $('#quem').textContent=''; ecraLogin(); }
 
 /* ---------- navegação ---------- */
+/* ---------- TABELA DE PREÇOS (para todos): Tabela 1 base, Tabela 2 = +20%, Tabela 3 = Tabela 2 + 50 € ---------- */
+const PRECOS = [
+  ['Cozinha e Casa de Banho', [['Tubo',220],['Sifão de cozinha completo',320],['Lavatório',220],['Bidé',220],['Poliban',340],['Sifão de casa de banho',360],['Montagem e desmontagem de sanita',380]]],
+  ['Esgotos', [['Caixa de esgoto (por caixa)',254],['Caixa pluvial (por caixa)',120],['Ramal entre caixas',460],['Prumada',480],['Saída da caixa para a rua',480]]],
+  ['Telhados', [['Limpeza de chaminé',150],['Limpeza de caleira (por metro)',60],['Desentupimento de algeroz',380]]],
+  ['Outros serviços', [['Inspeção com câmara de vídeo',180],['Desentupimento com bomba de ar',190]]]
+];
+const TABELAS_PRECO = [['Tabela 1', v=>v], ['Tabela 2 (+20%)', v=>Math.round(v*1.2)], ['Tabela 3 (T2 + 50 €)', v=>Math.round(v*1.2)+50]];
+let TAB_PRECO = 0;
+function precos(){
+  const [nomeT, f] = TABELAS_PRECO[TAB_PRECO];
+  const seg = '<div class="seg" style="margin-bottom:10px">' + TABELAS_PRECO.map(([t],i)=>`<button class="${TAB_PRECO===i?'on':''}" onclick="TAB_PRECO=${i};precos()">${esc(t)}</button>`).join('') + '</div>';
+  const secs = PRECOS.map(([sec, itens]) => `<div class="card"><b style="font-size:17px">${esc(sec)}</b><table style="margin-top:6px">${itens.map(([n,v])=>`<tr><td>${esc(n)}</td><td class="r"><b>${eur(f(v))}</b><div class="m">c/ IVA ${eur(r2(f(v)*1.23))}</div></td></tr>`).join('')}</table></div>`).join('');
+  $('#app').innerHTML = `<h2>💲 Tabela de preços — ${esc(nomeT)}</h2>` + seg + secs +
+    `<div class="card"><div class="m" style="font-weight:600">Valores sem IVA. Com fatura acresce IVA de 23% (valor "c/ IVA").</div><div class="m" style="margin-top:6px">Não nos responsabilizamos por danos em tubagens antigas ou em mau estado.</div></div>`;
+}
 function ir(t){ TAB=t; document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on', b.dataset.t===t));
-if(t==='agenda') agenda(); else if(t==='valores') valores(); else if(t==='financas') financas(); window.scrollTo(0,0); }
+if(t==='agenda') agenda(); else if(t==='valores') valores();else if(t==='financas') financas(); else if(t==='precos') precos(); window.scrollTo(0,0); }
 
 /* ---------- agenda ---------- */
 function cartao(j){
@@ -296,7 +312,7 @@ html += `<h2>Orçamentos dados</h2>` + (orc.length ? orc.map(cartao).join('') : 
 const ant = l.filter(j=>j.data<h).sort(ord).reverse();
 html += `<h2>Anteriores</h2>` + (ant.length ? ant.map(cartao).join('') : `<div class="card vazio">Sem trabalhos anteriores</div>`);
 }
-$('#lista').innerHTML = html + '<div style="text-align:center;font-size:11px;color:var(--mu);margin:18px 0 4px">versão 32 · 07/11</div>';
+$('#lista').innerHTML = html + '<div style="text-align:center;font-size:11px;color:var(--mu);margin:18px 0 4px">versão 33 · 12/11</div>';
 }
 
 /* ---------- formulário ---------- */
