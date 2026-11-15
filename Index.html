@@ -257,6 +257,8 @@ function precos(){
   $('#app').innerHTML = `<h2>💲 Tabela de preços — ${esc(nomeT)}</h2>` + seg + secs +
     `<div class="card"><div class="m" style="font-weight:600">Valores sem IVA. Com fatura acresce IVA de 23% (valor "c/ IVA").</div><div class="m" style="margin-top:6px">Não nos responsabilizamos por danos em tubagens antigas ou em mau estado.</div></div>`;
 }
+/* botão ⚡ Imediato: põe a data de hoje e a hora atual */
+function agoraJa(){ const d = new Date(); $('#f_data').value = d.toLocaleDateString('sv'); $('#f_hora').value = String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0'); toast('⚡ Marcado para agora'); }
 function ir(t){ TAB=t; document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on', b.dataset.t===t));
 if(t==='agenda') agenda(); else if(t==='valores') valores();else if(t==='financas') financas(); else if(t==='precos') precos(); window.scrollTo(0,0); }
 
@@ -312,7 +314,7 @@ html += `<h2>Orçamentos dados</h2>` + (orc.length ? orc.map(cartao).join('') : 
 const ant = l.filter(j=>j.data<h).sort(ord).reverse();
 html += `<h2>Anteriores</h2>` + (ant.length ? ant.map(cartao).join('') : `<div class="card vazio">Sem trabalhos anteriores</div>`);
 }
-$('#lista').innerHTML = html + '<div style="text-align:center;font-size:11px;color:var(--mu);margin:18px 0 4px">versão 33 · 12/11</div>';
+$('#lista').innerHTML = html + '<div style="text-align:center;font-size:11px;color:var(--mu);margin:18px 0 4px">versão 34 · 15/11</div>';
 }
 
 /* ---------- formulário ---------- */
@@ -475,6 +477,7 @@ $('#app').innerHTML = `<div class="card">
 <h2 style="margin-top:4px">${j.id?'Editar trabalho':'Novo trabalho'}</h2>
 <div class="row"><div><label>Data</label><input id="f_data" type="date" value="${esc(j.data)}"></div>
 <div><label>Hora</label><input id="f_hora" type="time" value="${esc(j.hora)}"></div></div>
+<button type="button" class="addorc" style="margin-top:6px" onclick="agoraJa()">⚡ Imediato (agora)</button>
 <div class="row"><div><label>Duração</label><select id="f_duracao">${[30,60,90,120,180,240].map(m=>`<option value="${m}" ${String(m)===String(j.duracao||60)?'selected':''}>${m<60?m+' min':(m/60)+' h'}</option>`).join('')}</select></div>
 <div><label>Técnico</label><select id="f_tecnico"><option value="">— Qualquer um —</option>${[...new Set(EQUIPAS.concat(TRAB).concat(j.tecnico?[j.tecnico]:[]))].map(n=>`<option ${n===j.tecnico?'selected':''}>${esc(n)}</option>`).join('')}</select></div></div>
 
